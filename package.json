@@ -1,0 +1,27 @@
+{
+  "name": "cashback",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Справочник моих банковских кешбэков: какая категория, в каком банке, сколько процентов",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --host",
+    "typecheck": "tsc --noEmit",
+    "smoke": "esbuild scripts/smoke-test.tsx --bundle --platform=node --format=esm --packages=external --outfile=node_modules/.cache/smoke-test.mjs && node node_modules/.cache/smoke-test.mjs"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "^5.6.3",
+    "vite": "^6.0.7",
+    "vite-plugin-pwa": "^0.21.1"
+  }
+}

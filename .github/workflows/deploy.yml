@@ -1,0 +1,66 @@
+name: Сборка и выкладка на GitHub Pages
+
+# Запускается при каждой отправке в main, а также вручную кнопкой Run workflow
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Права, которые нужны для публикации на Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Если отправить несколько правок подряд, доедет только последняя
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Установить зависимости
+        run: npm ci
+
+      - name: Проверить, что ничего не сломано
+        run: npm run smoke
+
+      - name: Собрать
+        run: npm run build
+        env:
+          # Сайт лежит не в корне домена, а по адресу вида
+          # https://ИМЯ.github.io/cashback/ — без базового пути
+          # не найдутся логотипы, иконки и service worker.
+          #
+          # Исключение: если репозиторий называется ИМЯ.github.io,
+          # сайт будет в корне — тогда замени строку ниже на VITE_BASE: /
+          VITE_BASE: /${{ github.event.repository.name }}/
+
+          # Настройки синхронизации. Задаются в репозитории:
+          # Settings → Secrets and variables → Actions → New repository secret.
+          # В сам репозиторий их класть не нужно.
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
