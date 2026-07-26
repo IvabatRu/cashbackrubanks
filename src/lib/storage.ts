@@ -2,8 +2,12 @@ import type { AppData, Cashback, Category, MyBank, Tombstone } from './types';
 
 const STORAGE_KEY = 'cashback-app';
 
-/** Версия формата данных. 1 — без отметок времени, 2 — с ними и с надгробиями. */
-export const SCHEMA_VERSION = 2;
+/**
+ * Версия формата данных.
+ * 1 — без отметок времени, 2 — с ними и с надгробиями,
+ * 3 — со своим порядком плиток.
+ */
+export const SCHEMA_VERSION = 3;
 
 /** Надгробия старше этого срока удаляем — иначе список растёт бесконечно. */
 const TOMBSTONE_LIFETIME_MS = 180 * 24 * 60 * 60 * 1000;
@@ -14,6 +18,8 @@ export const EMPTY_DATA: AppData = {
   cashbacks: [],
   customCategories: [],
   deleted: [],
+  categoryOrder: [],
+  categoryOrderUpdatedAt: 0,
 };
 
 /**
@@ -77,12 +83,21 @@ export function normalizeData(input: unknown): AppData {
 
   const deleted = Array.isArray(raw.deleted) ? raw.deleted.filter(isValidTombstone) : [];
 
+  const categoryOrder = Array.isArray(raw.categoryOrder)
+    ? raw.categoryOrder.filter((id): id is string => typeof id === 'string')
+    : [];
+
   return {
     schemaVersion: SCHEMA_VERSION,
     myBanks,
     cashbacks,
     customCategories,
     deleted: pruneTombstones(deleted),
+    categoryOrder,
+    categoryOrderUpdatedAt:
+      typeof raw.categoryOrderUpdatedAt === 'number' && Number.isFinite(raw.categoryOrderUpdatedAt)
+        ? raw.categoryOrderUpdatedAt
+        : 0,
   };
 }
 

@@ -142,7 +142,8 @@ report(
 // --- Миграция схемы 1 → 2 --------------------------------------------------
 section('Миграция старых данных');
 const migrated = normalizeData(LEGACY_DATA);
-expectEqual('версия схемы поднялась', migrated.schemaVersion, 2);
+expectEqual('версия схемы поднялась', migrated.schemaVersion, 3);
+expectEqual('порядок плиток по умолчанию пуст', migrated.categoryOrder, []);
 expectEqual(
   'myBankIds превратились в myBanks',
   migrated.myBanks.map((bank) => bank.id),
@@ -169,13 +170,17 @@ function makeData(options: {
   banks?: { id: string; addedAt: number }[];
   cashbacks?: Cashback[];
   deleted?: Tombstone[];
+  categoryOrder?: string[];
+  categoryOrderUpdatedAt?: number;
 }): AppData {
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     myBanks: options.banks ?? [],
     cashbacks: options.cashbacks ?? [],
     customCategories: [],
     deleted: options.deleted ?? [],
+    categoryOrder: options.categoryOrder ?? [],
+    categoryOrderUpdatedAt: options.categoryOrderUpdatedAt ?? 0,
   };
 }
 
@@ -286,6 +291,29 @@ expectEqual(
   3,
 );
 
+// 8. Порядок плиток — единое целое: побеждает заданный позже,
+// а не смесь двух расстановок
+const orderNewerOnRemote = mergeAppData(
+  makeData({ categoryOrder: ['fuel', 'pharmacy'], categoryOrderUpdatedAt: EARLIER }),
+  makeData({ categoryOrder: ['pharmacy', 'fuel'], categoryOrderUpdatedAt: LATER }),
+  NOW,
+);
+expectEqual('берётся порядок, заданный позже', orderNewerOnRemote.categoryOrder, [
+  'pharmacy',
+  'fuel',
+]);
+
+const orderNewerOnLocal = mergeAppData(
+  makeData({ categoryOrder: ['fuel', 'pharmacy'], categoryOrderUpdatedAt: LATER }),
+  makeData({ categoryOrder: ['pharmacy', 'fuel'], categoryOrderUpdatedAt: EARLIER }),
+  NOW,
+);
+expectEqual('и в обратную сторону тоже', orderNewerOnLocal.categoryOrder, ['fuel', 'pharmacy']);
+report(
+  orderNewerOnRemote.categoryOrder.length === 2,
+  'порядок не превратился в смесь двух расстановок',
+);
+
 // --- Код синхронизации и шифрование ---------------------------------------
 section('Код синхронизации и шифрование');
 
@@ -348,8 +376,8 @@ renderAndExpect('экран «Кешбэк»', wrap(<HomeScreen onGoToBanks={() 
   'Аптеки',
   'АЗС',
   'Строительные', // своя категория попала в список
-  'до 10%', // лучший процент по АЗС
-  'до 5%', // лучший процент по аптекам
+  '10%', // лучший процент по АЗС — крупным числом на плитке
+  '5%', // лучший процент по аптекам
   'С кешбэком',
   'Без кешбэка в этом месяце',
 ]);
@@ -434,8 +462,42 @@ renderAndExpect(
       ].map((cashback) => ({ ...cashback, period: CURRENT_PERIOD }))}
     />,
   ),
-  ['Т-Банк', 'Альфа-Банк', '5%', '3%', 'лучший'],
+  ['Т-Банк', 'Альфа-Банк', '5%', '3%', 'Лучший кешбэк'],
 );
+
+// --- Свой порядок плиток на экране ----------------------------------------
+section('Свой порядок плиток');
+
+// Аптеки дают 5%, АЗС — 10%. По умолчанию АЗС были бы выше,
+// но ручной порядок должен это перекрыть.
+memory.set(
+  'cashback-app',
+  JSON.stringify({
+    ...LEGACY_DATA,
+    categoryOrder: ['pharmacy', 'fuel'],
+    categoryOrderUpdatedAt: Date.now(),
+  }),
+);
+
+{
+  const html = renderToString(wrap(<HomeScreen onGoToBanks={() => {}} />)).replace(/<!-- -->/g, '');
+  const pharmacyAt = html.indexOf('Аптеки');
+  const fuelAt = html.indexOf('АЗС');
+  report(
+    pharmacyAt !== -1 && fuelAt !== -1 && pharmacyAt < fuelAt,
+    'ручной порядок перекрывает сортировку по проценту (Аптеки 5% встали выше АЗС 10%)',
+  );
+  report(html.includes('Мой порядок'), 'заголовок раздела меняется на «Мой порядок»');
+  report(html.includes('Изменить порядок'), 'есть кнопка входа в режим перестановки');
+}
+
+// Без ручного порядка — снова по убыванию процента
+memory.set('cashback-app', JSON.stringify(LEGACY_DATA));
+{
+  const html = renderToString(wrap(<HomeScreen onGoToBanks={() => {}} />)).replace(/<!-- -->/g, '');
+  report(html.indexOf('АЗС') < html.indexOf('Аптеки'), 'по умолчанию выше идёт больший процент');
+  report(html.includes('С кешбэком'), 'и заголовок раздела обычный');
+}
 
 // --- Пустые состояния -----------------------------------------------------
 section('Пустые состояния');

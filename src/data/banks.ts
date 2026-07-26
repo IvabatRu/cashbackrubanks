@@ -7,6 +7,12 @@ export interface Bank {
   name: string;
   /** Путь к логотипу в папке public/logos */
   logo: string;
+  /**
+   * Имя Android-приложения банка из реестра СБП, например "ru.sberbankmobile".
+   * Есть у 161 банка из 196 — у остальных приложения в реестре не указано,
+   * и кнопку перехода для них не показываем.
+   */
+  package?: string;
 }
 
 /**
@@ -34,9 +40,15 @@ function compareByName(a: Bank, b: Bank): number {
   return a.name.localeCompare(b.name, 'ru');
 }
 
-const rawList = banksRaw as { id: string; name: string }[];
+interface RawBank {
+  id: string;
+  name: string;
+  package?: string;
+}
 
-function toBank(raw: { id: string; name: string }): Bank {
+const rawList = banksRaw as RawBank[];
+
+function toBank(raw: RawBank): Bank {
   return {
     id: raw.id,
     // У популярных банков показываем короткое название, у остальных — как в реестре СБП
@@ -45,6 +57,7 @@ function toBank(raw: { id: string; name: string }): Bank {
     // ?. — чтобы этот же файл можно было запустить в Node (в smoke-тесте),
     // где переменных сборки Vite нет.
     logo: `${import.meta.env?.BASE_URL ?? '/'}logos/${raw.id}.png`,
+    package: raw.package,
   };
 }
 

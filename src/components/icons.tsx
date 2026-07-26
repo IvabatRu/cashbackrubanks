@@ -125,6 +125,23 @@ export const DotsIcon = (props: SVGProps<SVGSVGElement>) => (
   </Icon>
 );
 
+/** QR — оплата сканированием в приложении банка */
+export const QrIcon = (props: SVGProps<SVGSVGElement>) => (
+  <Icon {...props}>
+    <rect x="3.5" y="3.5" width="6" height="6" rx="1.5" />
+    <rect x="14.5" y="3.5" width="6" height="6" rx="1.5" />
+    <rect x="3.5" y="14.5" width="6" height="6" rx="1.5" />
+    <path d="M14.5 14.5h2.5v2.5M20.5 14.5v.01M20.5 20.5v.01M14.5 20.5v.01M17.5 20.5v.01M20.5 17.5v.01" />
+  </Icon>
+);
+
+/** Бесконтактная оплата — характерные дуги */
+export const ContactlessIcon = (props: SVGProps<SVGSVGElement>) => (
+  <Icon {...props}>
+    <path d="M7 8.5a5 5 0 0 1 0 7M11 6a9 9 0 0 1 0 12M15 3.5a13 13 0 0 1 0 17" />
+  </Icon>
+);
+
 export const ArrowUpIcon = (props: SVGProps<SVGSVGElement>) => (
   <Icon {...props}>
     <path d="M12 19V5M6 11l6-6 6 6" />
@@ -153,10 +170,3 @@ export const EyeOffIcon = (props: SVGProps<SVGSVGElement>) => (
   </Icon>
 );
 
-export const TrophyIcon = (props: SVGProps<SVGSVGElement>) => (
-  <Icon {...props}>
-    <path d="M8 4h8v5a4 4 0 0 1-8 0V4Z" />
-    <path d="M8 5.5H5.5A2.5 2.5 0 0 0 8 10M16 5.5h2.5A2.5 2.5 0 0 1 16 10" />
-    <path d="M12 13v3M9 20h6M10.5 16h3" />
-  </Icon>
-);

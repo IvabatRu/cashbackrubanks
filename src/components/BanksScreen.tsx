@@ -18,7 +18,7 @@ import { BankPickerSheet } from './BankPickerSheet';
 import { CategoryPickerSheet } from './CategoryPickerSheet';
 import { PercentSheet } from './PercentSheet';
 import { PeriodSwitcher } from './PeriodSwitcher';
-import { ArrowDownIcon, ArrowUpIcon, CopyIcon, PlusIcon, TrashIcon } from './icons';
+import { ArrowDownIcon, ArrowUpIcon, CardsIcon, CopyIcon, PlusIcon, TrashIcon } from './icons';
 
 /** Что именно сейчас редактируем в панели ввода процента. */
 interface PercentTarget {
@@ -112,7 +112,9 @@ export function BanksScreen() {
 
       {myBankIds.length === 0 ? (
         <div className="empty-state">
-          <span className="empty-emoji">💳</span>
+          <span className="empty-mark">
+            <CardsIcon width={26} height={26} />
+          </span>
           <h2>Пока нет ни одного банка</h2>
           <p>Добавь банки, карты которых у тебя есть, — потом заполнишь их кешбэки.</p>
           <button

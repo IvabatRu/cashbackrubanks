@@ -30,6 +30,11 @@ interface StoreValue {
   addCustomCategory: (name: string, emoji: string) => Category;
   removeCustomCategory: (id: string) => void;
 
+  /** Запоминает порядок плиток, заданный вручную */
+  setCategoryOrder: (categoryIds: string[]) => void;
+  /** Возвращает автоматический порядок — по убыванию процента */
+  resetCategoryOrder: () => void;
+
   /** Переносит все кешбэки из одного месяца в другой */
   copyPeriod: (from: Period, to: Period) => void;
   /** Удаляет все кешбэки месяца */
@@ -218,6 +223,22 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const setCategoryOrder = useCallback((categoryIds: string[]) => {
+    setData((previous) => ({
+      ...previous,
+      categoryOrder: categoryIds,
+      categoryOrderUpdatedAt: Date.now(),
+    }));
+  }, []);
+
+  const resetCategoryOrder = useCallback(() => {
+    setData((previous) => ({
+      ...previous,
+      categoryOrder: [],
+      categoryOrderUpdatedAt: Date.now(),
+    }));
+  }, []);
+
   const copyPeriod = useCallback((from: Period, to: Period) => {
     setData((previous) => {
       const now = Date.now();
@@ -282,6 +303,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       removeCashback,
       addCustomCategory,
       removeCustomCategory,
+      setCategoryOrder,
+      resetCategoryOrder,
       copyPeriod,
       clearPeriod,
       replaceAll,
@@ -299,6 +322,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       removeCashback,
       addCustomCategory,
       removeCustomCategory,
+      setCategoryOrder,
+      resetCategoryOrder,
       copyPeriod,
       clearPeriod,
       replaceAll,
