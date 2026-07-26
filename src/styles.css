@@ -1292,6 +1292,16 @@ a.icon-button {
   text-align: center;
 }
 
+.installed-note {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  color: var(--accent);
+  font-size: var(--fs-small);
+  font-weight: 600;
+}
+
 /* ==========================================================================
    СИНХРОНИЗАЦИЯ
    ========================================================================== */

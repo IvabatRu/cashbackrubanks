@@ -1,13 +1,14 @@
 import { useRef, useState } from 'react';
 import { ALL_BANKS } from '../data/banks';
 import { BUILT_IN_CATEGORIES } from '../data/categories';
+import { useInstallPrompt } from '../lib/install';
 import { describeData } from '../lib/merge';
 import { currentPeriod, formatPeriod } from '../lib/period';
 import { downloadBackup, normalizeData } from '../lib/storage';
 import type { ThemeMode } from '../lib/theme';
 import { useStore } from '../store/store';
 import { SyncSection } from './SyncSection';
-import { DownloadIcon, MoonIcon, SunIcon, TrashIcon, UploadIcon } from './icons';
+import { CheckIcon, DownloadIcon, MoonIcon, SunIcon, TrashIcon, UploadIcon } from './icons';
 
 const THEME_OPTIONS: { value: ThemeMode; label: string }[] = [
   { value: 'auto', label: 'Как в системе' },
@@ -24,6 +25,7 @@ export function SettingsScreen({ themeMode, onThemeChange }: SettingsScreenProps
   const { data, replaceAll, removeCustomCategory, clearPeriod } = useStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importMessage, setImportMessage] = useState('');
+  const { canInstall, installed, install } = useInstallPrompt();
 
   const thisPeriod = currentPeriod();
 
@@ -44,6 +46,33 @@ export function SettingsScreen({ themeMode, onThemeChange }: SettingsScreenProps
 
   return (
     <div className="screen">
+      {/* Показываем, только когда браузер действительно готов установить:
+          не установлено ещё, движок это умеет и условия соблюдены. */}
+      {canInstall && (
+        <section className="card">
+          <h2 className="card-title card-title--alone">Установить приложение</h2>
+          <p className="card-note">
+            Появится своя иконка, приложение будет открываться в отдельном окне без адресной
+            строки и работать без интернета.
+          </p>
+          <button
+            type="button"
+            className="button button--primary button--full"
+            onClick={() => void install()}
+          >
+            <DownloadIcon width={18} height={18} />
+            Установить
+          </button>
+        </section>
+      )}
+
+      {installed && (
+        <p className="installed-note">
+          <CheckIcon width={16} height={16} />
+          Приложение установлено на это устройство
+        </p>
+      )}
+
       <section className="card">
         <h2 className="card-title card-title--alone">Оформление</h2>
         <div className="segmented">
