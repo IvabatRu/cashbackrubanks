@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { getBankOrPlaceholder } from '../data/banks';
 import type { Bank } from '../data/banks';
 import { canOpenBankApp, openBankApp } from '../lib/deepLink';
@@ -39,6 +39,13 @@ export function CategoryResultSheet({
   const top = sorted[0];
   const rest = allEqual ? sorted : sorted.slice(1);
   const [openError, setOpenError] = useState('');
+
+  // Сообщение об ошибке живёт до следующего открытия панели. Без этого
+  // оно оставалось висеть, когда переходишь к другой категории:
+  // компонент не размонтируется, у него лишь меняются свойства.
+  useEffect(() => {
+    setOpenError('');
+  }, [open, category]);
 
   async function handleOpenBank(bank: Bank) {
     setOpenError((await openBankApp(bank)) ?? '');

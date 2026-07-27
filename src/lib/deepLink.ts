@@ -88,6 +88,9 @@ export async function openBankApp(bank: Bank): Promise<string | null> {
     return null;
   } catch (error) {
     console.error('Не удалось открыть приложение банка:', error);
-    return 'Не удалось открыть приложение банка. Возможно, оно не установлено.';
+    // Показываем настоящий текст ошибки: без него причину не отличить —
+    // приложение не установлено, схема не та или система отказала.
+    const details = error instanceof Error ? error.message : String(error);
+    return `Не удалось открыть ${bank.name}. ${details}`;
   }
 }
