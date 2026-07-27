@@ -9,6 +9,9 @@ dist-ssr/
 !.vscode/extensions.json
 dev-dist/
 
+# Предпросмотр раскладки: временный файл, генерируется npm run preview:html
+preview.html
+
 # Tauri: сборочные артефакты. Папка target весит гигабайты.
 src-tauri/target/
 src-tauri/gen/android/.gradle/

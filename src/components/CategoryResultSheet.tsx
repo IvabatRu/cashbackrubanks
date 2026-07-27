@@ -65,6 +65,7 @@ export function CategoryResultSheet({
       open={open}
       title={category ? `${category.emoji} ${category.name}` : ''}
       onClose={onClose}
+      placement="side"
     >
       {top === undefined ? (
         <p className="empty-note">

@@ -14,8 +14,8 @@
     "windows": [
       {
         "title": "Кешбэк",
-        "width": 520,
-        "height": 900,
+        "width": 1280,
+        "height": 880,
         "minWidth": 360,
         "minHeight": 480,
         "resizable": true,

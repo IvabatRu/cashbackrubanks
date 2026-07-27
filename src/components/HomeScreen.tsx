@@ -131,15 +131,20 @@ export function HomeScreen({ onGoToBanks }: { onGoToBanks: () => void }) {
 
   return (
     <div className="screen">
-      <PeriodSwitcher
-        period={period}
-        onChange={setPeriod}
-        minPeriod={earliestPeriod}
-        maxPeriod={allowedPeriods[allowedPeriods.length - 1]}
-        hint={period === thisPeriod ? 'текущий месяц' : undefined}
-      />
+      {/* На телефоне это две строки подряд, на ПК — одна: месяц слева,
+          поиск справа. Иначе верх монитора занимали бы два почти пустых
+          ряда. */}
+      <div className="screen-toolbar">
+        <PeriodSwitcher
+          period={period}
+          onChange={setPeriod}
+          minPeriod={earliestPeriod}
+          maxPeriod={allowedPeriods[allowedPeriods.length - 1]}
+          hint={period === thisPeriod ? 'текущий месяц' : undefined}
+        />
 
-      <SearchInput value={query} onChange={setQuery} placeholder="Найти категорию" />
+        <SearchInput value={query} onChange={setQuery} placeholder="Найти категорию" />
+      </div>
 
       {cashbacks.length === 0 && (
         <button type="button" className="banner banner--action" onClick={onGoToBanks}>

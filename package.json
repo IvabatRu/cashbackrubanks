@@ -10,6 +10,7 @@
     "preview": "vite preview --host",
     "typecheck": "tsc --noEmit",
     "smoke": "esbuild scripts/smoke-test.tsx --bundle --platform=node --format=esm --packages=external --outfile=node_modules/.cache/smoke-test.mjs && node node_modules/.cache/smoke-test.mjs",
+    "preview:html": "esbuild scripts/preview.tsx --bundle --platform=node --format=esm --packages=external --outfile=node_modules/.cache/preview.mjs --log-level=error && node node_modules/.cache/preview.mjs",
     "tauri": "tauri",
     "android:build": "tauri android build --debug --apk --target aarch64",
     "android:release": "tauri android build --apk --target aarch64"

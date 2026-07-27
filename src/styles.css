@@ -242,6 +242,14 @@ h3 {
   padding: var(--sp-4);
 }
 
+/* Месяц и поиск. На телефоне это просто две строки подряд — обёртка нужна
+   ради ПК, где они встают в одну строку. */
+.screen-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
 /* ==========================================================================
    ВКЛАДКИ
    ========================================================================== */
@@ -249,15 +257,30 @@ h3 {
 /* Плавающее «облачко»: панель не приклеена к низу, а висит над контентом,
    полупрозрачная, с размытием того, что под ней. Контент проезжает снизу
    и просвечивает — из-за этого панель не выглядит вырезанной из экрана. */
-.tabbar {
+/* Обёртка отвечает только за место на экране, панель — только за внешний
+   вид. Разделение нужно ради ПК: там панель переезжает наверх одной
+   правкой положения, а стекло остаётся ровно тем же. */
+.topbar {
   position: fixed;
   left: 50%;
   bottom: calc(env(safe-area-inset-bottom) + var(--sp-4));
   z-index: 20;
   transform: translateX(-50%);
   display: flex;
-  gap: var(--sp-1);
+  justify-content: center;
   max-width: calc(100vw - var(--sp-8));
+}
+
+/* Знак приложения нужен только на большом экране: на телефоне иконка
+   приложения и так перед глазами, а место в «облачке» дорого. */
+.topbar-brand {
+  display: none;
+}
+
+.tabbar {
+  display: flex;
+  gap: var(--sp-1);
+  max-width: 100%;
   padding: var(--sp-1);
   border: 1px solid var(--glass-line);
   border-radius: var(--r-pill);
@@ -1396,4 +1419,228 @@ code {
   background: var(--surface-2);
   font-family: ui-monospace, 'Cascadia Mono', 'Segoe UI Mono', Menlo, Consolas, monospace;
   font-size: 0.92em;
+}
+
+/* ==========================================================================
+   ПК-ВЕРСИЯ
+
+   До этого на мониторе показывалась телефонная раскладка: колонка
+   шириной 640 пикселей посреди пустоты. Здесь она разворачивается.
+
+   Приём взят с сайтов Сбера и Альфы: подкрашенный фон страницы,
+   содержимое лежит в скруглённом контейнере, внутри — сетка крупных
+   плиток. Панель разделов переезжает снизу наверх, но остаётся тем же
+   стеклянным «облачком», что и на телефоне: раскладка разная, язык общий.
+
+   Порог в 1000 пикселей выбран так, чтобы поместились и сетка из пяти
+   плиток, и панель результата справа. Ниже него всё остаётся как было —
+   планшет и телефон эту ветку не видят.
+
+   Значение продублировано в Sheet.tsx: там от него зависит, блокировать
+   ли прокрутку страницы. Менять нужно в обоих местах.
+   ========================================================================== */
+
+@media (min-width: 1000px) {
+  :root {
+    --content-width: 1160px;
+    /* Высота плавающей панели: от неё считается отступ содержимого сверху */
+    --topbar-height: 46px;
+  }
+
+  /* --- Панель разделов наверху ------------------------------------------ */
+
+  .topbar {
+    top: var(--sp-4);
+    bottom: auto;
+    display: grid;
+    /* Пустая колонка справа уравновешивает знак приложения слева —
+       без неё панель разделов оказалась бы правее середины экрана */
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    width: min(100% - var(--sp-8), var(--content-width));
+    max-width: none;
+  }
+
+  .topbar-brand {
+    display: flex;
+    justify-self: start;
+    padding: var(--sp-2);
+    border: 1px solid var(--glass-line);
+    border-radius: var(--r-pill);
+    background: var(--glass-bg);
+    box-shadow: 0 8px 32px var(--glass-shadow);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    backdrop-filter: blur(20px) saturate(180%);
+  }
+
+  .topbar-brand img {
+    display: block;
+    border-radius: var(--r-xs);
+  }
+
+  /* --- Состояние синхронизации уходит в правый угол ---------------------- */
+
+  .app-header {
+    position: fixed;
+    top: var(--sp-4);
+    right: 0;
+    left: 0;
+    z-index: 21;
+    display: flex;
+    align-items: center;
+    height: var(--topbar-height);
+    padding: 0 var(--sp-4);
+    border-bottom: 0;
+    background: none;
+    /* Полоса растянута во всю ширину и прозрачна: без этого она
+       перехватывала бы нажатия по панели разделов под собой */
+    pointer-events: none;
+  }
+
+  .app-header-inner > * {
+    pointer-events: auto;
+    padding: var(--sp-2) var(--sp-4);
+    border: 1px solid var(--glass-line);
+    border-radius: var(--r-pill);
+    background: var(--glass-bg);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    backdrop-filter: blur(20px) saturate(180%);
+  }
+
+  /* --- Основная область -------------------------------------------------- */
+
+  /* Второй селектор перебивает правило для случая с шапкой: там отступ
+     сверху обнулён, потому что на телефоне его даёт сама шапка */
+  .app-main,
+  .app-header + .app-main {
+    padding-top: calc(var(--topbar-height) + var(--sp-8));
+    padding-bottom: var(--sp-12);
+  }
+
+  .screen {
+    gap: var(--sp-4);
+    /* Шире телефонного: при открытой боковой панели содержимое ужимается,
+       и с отступом в 16 пикселей оно прилипало бы к краю экрана */
+    padding: 0 var(--sp-6);
+  }
+
+  /* Месяц слева, поиск справа — одной строкой */
+  .screen-toolbar {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-6);
+  }
+
+  /* Ссылка «Изменить порядок» сама по себе занимала целую полосу
+     над сеткой. Подтягиваем её вплотную к сетке, к которой она и относится. */
+  .screen > .section-header--end {
+    margin-bottom: calc(var(--sp-3) * -1);
+  }
+
+  /* --- Месяц работает заголовком экрана ---------------------------------- */
+
+  /* Заголовки экранов мы убрали, и верх страницы на мониторе оказался бы
+     пустым. Месяц — единственное, что там осмысленно: он и так задаёт
+     смысл всему, что ниже. Стрелки прижимаются к названию, а не
+     расползаются по краям экрана. */
+  .period-switcher {
+    justify-content: flex-start;
+    gap: var(--sp-2);
+  }
+
+  .period-label {
+    order: -1;
+    align-items: flex-start;
+    margin-right: var(--sp-2);
+  }
+
+  .period-name {
+    font-size: var(--fs-heading);
+    letter-spacing: -0.02em;
+  }
+
+  /* --- Сетка плиток ------------------------------------------------------ */
+
+  /* Тот самый белый контейнер со скруглением: плитки перестают висеть
+     на голом фоне и читаются одним блоком */
+  .category-grid {
+    /* 180 даёт пять плиток в ряду при ширине содержимого 1160. Меньше нельзя:
+       процент вырос до размера героя, и «12,5%» должно помещаться в строку. */
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: var(--sp-3);
+    padding: var(--sp-4);
+    border-radius: var(--r-card);
+    background: var(--surface);
+  }
+
+  /* Внутри контейнера плитки отделяются подложкой, а не рамкой:
+     полторы сотни рамок рядом дают рябь */
+  .category-grid .category-tile {
+    padding: var(--sp-4);
+    border-color: transparent;
+    background: var(--surface-2);
+  }
+
+  .category-grid .category-tile:hover {
+    border-color: var(--accent);
+  }
+
+  .category-percent {
+    font-size: var(--fs-hero);
+    line-height: 1;
+  }
+
+  /* --- Панель результата справа ------------------------------------------ */
+
+  /* Подложка перестаёт быть шторкой и превращается в слой позиционирования:
+     она прозрачна и не ловит нажатия, поэтому сетка под ней остаётся живой
+     и по плиткам можно щёлкать подряд, ничего не закрывая.
+     Закрывается панель крестиком или клавишей Esc. */
+  .sheet-backdrop--side {
+    align-items: stretch;
+    justify-content: flex-end;
+    background: none;
+    pointer-events: none;
+    animation: none;
+  }
+
+  .sheet-backdrop--side .sheet {
+    pointer-events: auto;
+    width: 400px;
+    max-width: none;
+    max-height: none;
+    margin: var(--sp-4) var(--sp-4) var(--sp-4) 0;
+    border-radius: var(--r-card);
+    border: 1px solid var(--line);
+    animation: slide-in-right 0.22s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  /* Содержимое подвигается, чтобы панель не легла поверх правых плиток.
+     :has() здесь именно то, что нужно: состояние панели живёт в React,
+     а знать о нём должна раскладка. Браузер без :has() просто покажет
+     панель поверх — это менее удобно, но не сломано. */
+  .app:has(.sheet-backdrop--side) .app-main {
+    padding-right: calc(400px + var(--sp-4));
+  }
+
+  /* --- Мелочи ------------------------------------------------------------ */
+
+  /* Поиску во всю ширину монитора делать нечего. Только прямой потомок:
+     внутри всплывающих панелей поиск должен занимать всю ширину. */
+  .screen > .search {
+    max-width: 420px;
+  }
+
+  /* Карточки в «Ещё» и «Моих банках» тоже не должны тянуться на 1160 */
+  .screen > .card {
+    max-width: 720px;
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    transform: translateX(16px);
+    opacity: 0;
+  }
 }

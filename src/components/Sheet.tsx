@@ -2,18 +2,34 @@ import { useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { CloseIcon } from './icons';
 
+/** Ширина, с которой раскладка становится «настольной». Держать в согласии со styles.css. */
+const DESKTOP_QUERY = '(min-width: 1000px)';
+
 interface SheetProps {
   open: boolean;
   title: string;
   onClose: () => void;
+  /**
+   * Где панель показывается на большом экране.
+   *
+   * `modal` — окно по центру: задача, которую нужно довести до конца
+   * (выбрать банк, ввести процент). Всё остальное на это время не нужно.
+   *
+   * `side` — панель у правого края, страница под ней остаётся живой:
+   * просмотр, при котором сетка категорий никуда не девается и можно
+   * щёлкать плитки подряд, ничего не закрывая.
+   *
+   * На телефоне разницы нет — обе выезжают снизу, там места на другое нет.
+   */
+  placement?: 'modal' | 'side';
   children: ReactNode;
 }
 
 /**
- * Всплывающая панель. На телефоне выезжает снизу, на большом экране
- * показывается как окно по центру — за это отвечает CSS, а не JS.
+ * Всплывающая панель. Где именно она окажется, решает CSS, а не JS —
+ * здесь только выбор поведения, которое стилями не задать.
  */
-export function Sheet({ open, title, onClose, children }: SheetProps) {
+export function Sheet({ open, title, onClose, placement = 'modal', children }: SheetProps) {
   // Закрытие по Escape и блокировка прокрутки страницы под панелью.
   useEffect(() => {
     if (!open) return;
@@ -23,20 +39,25 @@ export function Sheet({ open, title, onClose, children }: SheetProps) {
     }
 
     document.addEventListener('keydown', handleKeyDown);
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
 
-    // Возвращаем всё как было, когда панель закрывается
+    // Боковая панель страницу не перекрывает, поэтому прокрутку не трогаем:
+    // иначе сетка категорий под ней замерла бы без видимой причины.
+    const asideOnDesktop = placement === 'side' && window.matchMedia(DESKTOP_QUERY).matches;
+    const previousOverflow = document.body.style.overflow;
+    if (!asideOnDesktop) document.body.style.overflow = 'hidden';
+
+    // Возвращаем как было в любом случае: окно могли растянуть,
+    // пока панель была открыта, и тогда ветка выше уже не та
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
       document.body.style.overflow = previousOverflow;
     };
-  }, [open, onClose]);
+  }, [open, onClose, placement]);
 
   if (!open) return null;
 
   return (
-    <div className="sheet-backdrop" onClick={onClose}>
+    <div className={`sheet-backdrop sheet-backdrop--${placement}`} onClick={onClose}>
       {/* stopPropagation — чтобы клик внутри панели не закрывал её */}
       <div
         className="sheet"
