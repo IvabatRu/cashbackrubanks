@@ -8,3 +8,18 @@ dist-ssr/
 .vscode/*
 !.vscode/extensions.json
 dev-dist/
+
+# Tauri: сборочные артефакты. Папка target весит гигабайты.
+src-tauri/target/
+src-tauri/gen/android/.gradle/
+src-tauri/gen/android/build/
+src-tauri/gen/android/app/build/
+src-tauri/gen/android/local.properties
+
+# Ключи подписи приложения. Дублирую исключения, которые Tauri уже создал
+# внутри gen/android: репозиторий публичный, и попадание ключа в него
+# означало бы, что кто угодно сможет выпустить обновление под твоим именем.
+src-tauri/gen/android/keystore.properties
+src-tauri/gen/android/key.properties
+*.keystore
+*.jks
