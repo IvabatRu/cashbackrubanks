@@ -1,6 +1,7 @@
+import { useState } from 'react';
 import { getBankOrPlaceholder } from '../data/banks';
 import type { Bank } from '../data/banks';
-import { bankAppUrl, isAndroid } from '../lib/deepLink';
+import { canOpenBankApp, openBankApp } from '../lib/deepLink';
 import { formatPeriod } from '../lib/period';
 import { formatPercent } from '../lib/text';
 import type { Cashback, Category, Period } from '../lib/types';
@@ -37,7 +38,11 @@ export function CategoryResultSheet({
 
   const top = sorted[0];
   const rest = allEqual ? sorted : sorted.slice(1);
-  const android = isAndroid();
+  const [openError, setOpenError] = useState('');
+
+  async function handleOpenBank(bank: Bank) {
+    setOpenError((await openBankApp(bank)) ?? '');
+  }
 
   return (
     <Sheet
@@ -76,9 +81,19 @@ export function CategoryResultSheet({
             )}
           </div>
 
-          {android && !(allEqual && sorted.length > 1) && (
-            <OpenBankButton bank={getBankOrPlaceholder(top.bankId)} />
-          )}
+          {!(allEqual && sorted.length > 1) &&
+            canOpenBankApp(getBankOrPlaceholder(top.bankId)) && (
+              <button
+                type="button"
+                className="button button--primary button--full"
+                onClick={() => void handleOpenBank(getBankOrPlaceholder(top.bankId))}
+              >
+                <QrIcon width={18} height={18} />
+                Открыть {getBankOrPlaceholder(top.bankId).name}
+              </button>
+            )}
+
+          {openError && <p className="error-note">{openError}</p>}
 
           {rest.length > 0 && (
             <ul className="result-list">
@@ -92,14 +107,15 @@ export function CategoryResultSheet({
                       {!allEqual && (
                         <span className="percent-badge">{formatPercent(cashback.percent)}%</span>
                       )}
-                      {android && bankAppUrl(bank) && (
-                        <a
+                      {canOpenBankApp(bank) && (
+                        <button
+                          type="button"
                           className="icon-button"
-                          href={bankAppUrl(bank) as string}
+                          onClick={() => void handleOpenBank(bank)}
                           aria-label={`Открыть приложение ${bank.name}`}
                         >
                           <QrIcon width={18} height={18} />
-                        </a>
+                        </button>
                       )}
                     </div>
                   </li>
@@ -111,22 +127,5 @@ export function CategoryResultSheet({
         </>
       )}
     </Sheet>
-  );
-}
-
-/**
- * Кнопки Mir Pay здесь больше нет: открыть его из браузера нечем.
- * У приложения нет схемы ссылок, зарегистрированной для интернета,
- * а запуск по имени пакета Android из веба не разрешает.
- */
-function OpenBankButton({ bank }: { bank: Bank }) {
-  const url = bankAppUrl(bank);
-  if (!url) return null;
-
-  return (
-    <a className="button button--primary button--full" href={url}>
-      <QrIcon width={18} height={18} />
-      Открыть {bank.name}
-    </a>
   );
 }
