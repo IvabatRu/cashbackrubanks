@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 import { getBankOrPlaceholder } from '../data/banks';
 import type { Bank } from '../data/banks';
-import { canOpenBankApp, openBankApp } from '../lib/deepLink';
+import { canLaunchApps, canOpenBankApp, openBankApp, openMirPay } from '../lib/deepLink';
 import { formatPeriod } from '../lib/period';
 import { formatPercent } from '../lib/text';
 import type { Cashback, Category, Period } from '../lib/types';
 import { BankLogo } from './BankLogo';
 import { Sheet } from './Sheet';
-import { QrIcon } from './icons';
+import { ContactlessIcon, ExternalIcon } from './icons';
 
 interface CategoryResultSheetProps {
   open: boolean;
@@ -51,6 +51,10 @@ export function CategoryResultSheet({
     setOpenError((await openBankApp(bank)) ?? '');
   }
 
+  async function handleOpenMirPay() {
+    setOpenError((await openMirPay()) ?? '');
+  }
+
   return (
     <Sheet
       open={open}
@@ -88,17 +92,29 @@ export function CategoryResultSheet({
             )}
           </div>
 
-          {!(allEqual && sorted.length > 1) &&
-            canOpenBankApp(getBankOrPlaceholder(top.bankId)) && (
+          {canLaunchApps() && (
+            <div className="button-row">
+              {!(allEqual && sorted.length > 1) &&
+                canOpenBankApp(getBankOrPlaceholder(top.bankId)) && (
+                  <button
+                    type="button"
+                    className="button button--primary"
+                    onClick={() => void handleOpenBank(getBankOrPlaceholder(top.bankId))}
+                  >
+                    <ExternalIcon width={18} height={18} />
+                    Открыть {getBankOrPlaceholder(top.bankId).name}
+                  </button>
+                )}
               <button
                 type="button"
-                className="button button--primary button--full"
-                onClick={() => void handleOpenBank(getBankOrPlaceholder(top.bankId))}
+                className="button button--ghost"
+                onClick={() => void handleOpenMirPay()}
               >
-                <QrIcon width={18} height={18} />
-                Открыть {getBankOrPlaceholder(top.bankId).name}
+                <ContactlessIcon width={18} height={18} />
+                Mir Pay
               </button>
-            )}
+            </div>
+          )}
 
           {openError && <p className="error-note">{openError}</p>}
 
@@ -121,7 +137,7 @@ export function CategoryResultSheet({
                           onClick={() => void handleOpenBank(bank)}
                           aria-label={`Открыть приложение ${bank.name}`}
                         >
-                          <QrIcon width={18} height={18} />
+                          <ExternalIcon width={18} height={18} />
                         </button>
                       )}
                     </div>

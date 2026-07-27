@@ -1,96 +1,81 @@
 import type { Bank } from '../data/banks';
 
 /**
- * Переход в приложение банка.
+ * Запуск других приложений с телефона.
  *
- * Здесь две разные среды с разными правилами, и это главное, что нужно
- * помнить при правках:
+ * История вопроса, чтобы не наступить на те же грабли:
  *
- * 1) В браузере работает адрес вида "intent:", который понимает Chrome.
- *    Но Chrome принудительно требует, чтобы у открываемого экрана было
- *    разрешение открываться из интернета. Поэтому запустить приложение
- *    по имени пакета нельзя — только по схеме ссылок, которую банк сам
- *    зарегистрировал для веба. У участников СБП такая схема есть,
- *    и совпадает она с их идентификатором в реестре НСПК.
+ * 1) Запуск по имени пакета из браузера невозможен. Chrome при переходе
+ *    из интернета открывает только те экраны, которым разработчик явно
+ *    разрешил открываться из веба, а главный экран приложения такого
+ *    разрешения не имеет.
  *
- * 2) В нативном приложении внутри работает системный WebView. Он про
- *    "intent:" не знает вовсе и отвечает ERR_UNKNOWN_URL_SCHEME. Зато
- *    ограничения браузера на нативный код не распространяются: система
- *    открывает схему напрямую. Для этого используется плагин opener.
+ * 2) Открытие схемы системы быстрых платежей ("bank100000000004://")
+ *    формально работало, но приложение банка принимало такую ссылку
+ *    за платёжный QR-код и ругалось: ВТБ показывал «В этом QR-коде нет
+ *    нужных реквизитов для платежа», Альфа-Банк — общую ошибку. Человек
+ *    в этот момент решает, что его пытаются обмануть.
+ *
+ * 3) Работает третий способ: нативный код просит Android запустить
+ *    приложение так же, как это делает нажатие на значок на рабочем столе.
+ *    Именно он здесь и используется — через команду launch_app.
+ *
+ * Поэтому кнопки показываются только в нативном приложении. В браузере
+ * их нет: там доступен лишь второй способ, а он приводит к ошибке.
  */
+
+/** Приложение бесконтактной оплаты картой «Мир». */
+export const MIR_PAY = {
+  name: 'Mir Pay',
+  package: 'ru.nspk.mirpay',
+};
 
 /** Работаем внутри нативного приложения, а не в браузере. */
 export function isTauri(): boolean {
   return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
 }
 
-/**
- * Android ли это. Проверяем по строке браузера — способ грубый,
- * но для «показывать кнопку или нет» его достаточно.
- */
-export function isAndroid(): boolean {
+function isAndroid(): boolean {
   if (typeof navigator === 'undefined') return false;
   return /android/i.test(navigator.userAgent);
 }
 
-/** Умеем ли мы вообще открыть приложение этого банка. */
+/** Можем ли мы вообще запускать чужие приложения в текущей среде. */
+export function canLaunchApps(): boolean {
+  return isTauri() && isAndroid();
+}
+
+/** Умеем ли мы открыть приложение конкретного банка. */
 export function canOpenBankApp(bank: Bank): boolean {
   // Приложение указано в реестре СБП не у всех: у 35 банков из 196 его нет
-  return isAndroid() && Boolean(bank.package);
+  return canLaunchApps() && Boolean(bank.package);
 }
 
 /**
- * Схема ссылок СБП банка — её открывает система в нативном приложении.
- * Совпадает с идентификатором банка в реестре: "bank100000000004://".
- */
-function bankSchemeUrl(bank: Bank): string {
-  return `${bank.id}://qr.nspk.ru/`;
-}
-
-/**
- * Адрес для браузера. Части:
- *   intent://qr.nspk.ru/ — что открыть;
- *   scheme    — схема, по которой Android найдёт приложение;
- *   package   — какое именно, если схему обрабатывает несколько;
- *   S.browser_fallback_url — куда отправить, если приложение не установлено.
- */
-function bankIntentUrl(bank: Bank): string {
-  const fallback = encodeURIComponent(
-    `https://play.google.com/store/apps/details?id=${bank.package}`,
-  );
-
-  return [
-    'intent://qr.nspk.ru/#Intent',
-    `scheme=${bank.id}`,
-    `package=${bank.package}`,
-    `S.browser_fallback_url=${fallback}`,
-    'end',
-  ].join(';');
-}
-
-/**
- * Открывает приложение банка тем способом, который работает в текущей среде.
+ * Запускает приложение по имени пакета.
  * Возвращает текст ошибки при неудаче и null при успехе.
  */
-export async function openBankApp(bank: Bank): Promise<string | null> {
-  if (!bank.package) return 'Для этого банка приложение не указано в реестре СБП.';
-
+export async function launchApp(packageName: string, appName: string): Promise<string | null> {
   try {
-    if (isTauri()) {
-      // Динамический импорт: в сборке для браузера этот код в основной
-      // файл не попадёт и загружаться не будет
-      const { openUrl } = await import('@tauri-apps/plugin-opener');
-      await openUrl(bankSchemeUrl(bank));
-      return null;
-    }
-
-    window.location.href = bankIntentUrl(bank);
+    // Динамический импорт: в сборке для браузера этот код в основной
+    // файл не попадёт и загружаться не будет
+    const { invoke } = await import('@tauri-apps/api/core');
+    await invoke('launch_app', { packageName });
     return null;
   } catch (error) {
-    console.error('Не удалось открыть приложение банка:', error);
-    // Показываем настоящий текст ошибки: без него причину не отличить —
-    // приложение не установлено, схема не та или система отказала.
+    console.error(`Не удалось запустить ${appName}:`, error);
     const details = error instanceof Error ? error.message : String(error);
-    return `Не удалось открыть ${bank.name}. ${details}`;
+    return `Не удалось открыть ${appName}. ${details}`;
   }
+}
+
+export function openBankApp(bank: Bank): Promise<string | null> {
+  if (!bank.package) {
+    return Promise.resolve('Для этого банка приложение не указано в реестре СБП.');
+  }
+  return launchApp(bank.package, bank.name);
+}
+
+export function openMirPay(): Promise<string | null> {
+  return launchApp(MIR_PAY.package, MIR_PAY.name);
 }

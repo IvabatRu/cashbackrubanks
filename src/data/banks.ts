@@ -40,6 +40,23 @@ function compareByName(a: Bank, b: Bank): number {
   return a.name.localeCompare(b.name, 'ru');
 }
 
+/**
+ * Приложения, которых нет в реестре СБП, но которые существуют.
+ * Имена пакетов взяты со страниц этих приложений в Google Play.
+ *
+ * Держим их здесь, а не в banks.json: тот файл сгенерирован из реестра
+ * НСПК и перезаписывается при его обновлении — правки в нём пропадут.
+ *
+ * ВАЖНО: пакеты отсюда нужно продублировать в списке видимых приложений
+ * в AndroidManifest.xml, иначе на Android 11+ запуск не сработает.
+ */
+const EXTRA_BANK_PACKAGES: Record<string, string> = {
+  // Озон Банк
+  'bank100000000273': 'ru.ozon.fintech.finance',
+  // ВБ Банк — отдельного приложения нет, банк живёт внутри Wildberries
+  'bank100000000259': 'com.wildberries.ru',
+};
+
 interface RawBank {
   id: string;
   name: string;
@@ -57,7 +74,7 @@ function toBank(raw: RawBank): Bank {
     // ?. — чтобы этот же файл можно было запустить в Node (в smoke-тесте),
     // где переменных сборки Vite нет.
     logo: `${import.meta.env?.BASE_URL ?? '/'}logos/${raw.id}.png`,
-    package: raw.package,
+    package: raw.package ?? EXTRA_BANK_PACKAGES[raw.id],
   };
 }
 

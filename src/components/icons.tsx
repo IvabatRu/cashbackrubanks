@@ -125,13 +125,13 @@ export const DotsIcon = (props: SVGProps<SVGSVGElement>) => (
   </Icon>
 );
 
-/** QR — оплата сканированием в приложении банка */
-export const QrIcon = (props: SVGProps<SVGSVGElement>) => (
+/** Переход в другое приложение. Раньше здесь был значок QR-кода, но он
+    обещал сканирование, которого не происходит: открывается само приложение. */
+export const ExternalIcon = (props: SVGProps<SVGSVGElement>) => (
   <Icon {...props}>
-    <rect x="3.5" y="3.5" width="6" height="6" rx="1.5" />
-    <rect x="14.5" y="3.5" width="6" height="6" rx="1.5" />
-    <rect x="3.5" y="14.5" width="6" height="6" rx="1.5" />
-    <path d="M14.5 14.5h2.5v2.5M20.5 14.5v.01M20.5 20.5v.01M14.5 20.5v.01M17.5 20.5v.01M20.5 17.5v.01" />
+    <path d="M14 4h6v6" />
+    <path d="M20 4 11 13" />
+    <path d="M18 14v5a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 4 19V8a1.5 1.5 0 0 1 1.5-1.5H10" />
   </Icon>
 );
 
