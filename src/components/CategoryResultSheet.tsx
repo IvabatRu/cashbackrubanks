@@ -1,12 +1,12 @@
 import { getBankOrPlaceholder } from '../data/banks';
 import type { Bank } from '../data/banks';
-import { appLaunchUrl, isAndroid, mirPayUrl } from '../lib/deepLink';
+import { bankAppUrl, isAndroid } from '../lib/deepLink';
 import { formatPeriod } from '../lib/period';
 import { formatPercent } from '../lib/text';
 import type { Cashback, Category, Period } from '../lib/types';
 import { BankLogo } from './BankLogo';
 import { Sheet } from './Sheet';
-import { ContactlessIcon, QrIcon } from './icons';
+import { QrIcon } from './icons';
 
 interface CategoryResultSheetProps {
   open: boolean;
@@ -76,10 +76,8 @@ export function CategoryResultSheet({
             )}
           </div>
 
-          {/* Оплата: QR открывает приложение банка, вторая кнопка — Mir Pay
-              для выбора карты перед оплатой телефоном. */}
           {android && !(allEqual && sorted.length > 1) && (
-            <PayActions bank={getBankOrPlaceholder(top.bankId)} />
+            <OpenBankButton bank={getBankOrPlaceholder(top.bankId)} />
           )}
 
           {rest.length > 0 && (
@@ -94,10 +92,10 @@ export function CategoryResultSheet({
                       {!allEqual && (
                         <span className="percent-badge">{formatPercent(cashback.percent)}%</span>
                       )}
-                      {android && bank.package && (
+                      {android && bankAppUrl(bank) && (
                         <a
                           className="icon-button"
-                          href={appLaunchUrl(bank.package)}
+                          href={bankAppUrl(bank) as string}
                           aria-label={`Открыть приложение ${bank.name}`}
                         >
                           <QrIcon width={18} height={18} />
@@ -110,32 +108,25 @@ export function CategoryResultSheet({
             </ul>
           )}
 
-          {android && allEqual && sorted.length > 1 && <MirPayButton />}
         </>
       )}
     </Sheet>
   );
 }
 
-function PayActions({ bank }: { bank: Bank }) {
-  return (
-    <div className="button-row">
-      {bank.package && (
-        <a className="button button--primary" href={appLaunchUrl(bank.package)}>
-          <QrIcon width={18} height={18} />
-          Оплатить по QR
-        </a>
-      )}
-      <MirPayButton />
-    </div>
-  );
-}
+/**
+ * Кнопки Mir Pay здесь больше нет: открыть его из браузера нечем.
+ * У приложения нет схемы ссылок, зарегистрированной для интернета,
+ * а запуск по имени пакета Android из веба не разрешает.
+ */
+function OpenBankButton({ bank }: { bank: Bank }) {
+  const url = bankAppUrl(bank);
+  if (!url) return null;
 
-function MirPayButton() {
   return (
-    <a className="button button--ghost" href={mirPayUrl()}>
-      <ContactlessIcon width={18} height={18} />
-      Mir Pay
+    <a className="button button--primary button--full" href={url}>
+      <QrIcon width={18} height={18} />
+      Открыть {bank.name}
     </a>
   );
 }
