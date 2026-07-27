@@ -13,6 +13,17 @@ val tauriProperties = Properties().apply {
     }
 }
 
+// Ключ подписи выпускной сборки. И сам файл ключа, и keystore.properties
+// лежат вне репозитория и перечислены в .gitignore: репозиторий публичный,
+// а попадание ключа в него позволило бы кому угодно выпускать обновления
+// приложения от твоего имени.
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+val keystoreProperties = Properties().apply {
+    if (keystorePropertiesFile.exists()) {
+        keystorePropertiesFile.inputStream().use { load(it) }
+    }
+}
+
 android {
     compileSdk = 36
     namespace = "ru.ivabat.cashback"
@@ -23,6 +34,16 @@ android {
         targetSdk = 36
         versionCode = tauriProperties.getProperty("tauri.android.versionCode", "1").toInt()
         versionName = tauriProperties.getProperty("tauri.android.versionName", "1.0")
+    }
+    signingConfigs {
+        create("release") {
+            keystoreProperties.getProperty("keyAlias")?.let { keyAlias = it }
+            keystoreProperties.getProperty("password")?.let {
+                keyPassword = it
+                storePassword = it
+            }
+            keystoreProperties.getProperty("storeFile")?.let { storeFile = file(it) }
+        }
     }
     buildTypes {
         getByName("debug") {
@@ -38,6 +59,12 @@ android {
             }
         }
         getByName("release") {
+            // Подписываем, только если ключ настроен. Иначе сборка не упадёт,
+            // а просто выдаст неподписанный файл — это важно для чужой машины
+            // и для CI, где ключа нет.
+            if (keystorePropertiesFile.exists()) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             isMinifyEnabled = true
             proguardFiles(
                 *fileTree(".") { include("**/*.pro") }
