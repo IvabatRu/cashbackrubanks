@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { EMOJI_CHOICES } from '../data/categories';
-import { matchesQuery } from '../lib/text';
+import { matchesQuery, normalizeForSearch } from '../lib/text';
 import type { Category } from '../lib/types';
 import { useStore } from '../store/store';
 import { SearchInput } from './SearchInput';
@@ -50,9 +50,20 @@ export function CategoryPickerSheet({
     reset();
   }
 
+  /**
+   * Категория с таким же названием уже есть — считаем без учёта регистра
+   * и «ё». Две одинаковые категории в списках выбора не отличить,
+   * поэтому создавать вторую не даём.
+   */
+  const duplicate =
+    newName.trim() !== '' &&
+    categories.some(
+      (category) => normalizeForSearch(category.name) === normalizeForSearch(newName),
+    );
+
   function handleCreate() {
     const name = newName.trim();
-    if (!name) return;
+    if (!name || duplicate) return;
     const created = addCustomCategory(name, newEmoji);
     onPick(created.id);
     reset();
@@ -82,6 +93,8 @@ export function CategoryPickerSheet({
             />
           </label>
 
+          {duplicate && <p className="error-note">Такая категория уже есть.</p>}
+
           <span className="field-label">Значок</span>
           <div className="emoji-grid">
             {EMOJI_CHOICES.map((emoji) => (
@@ -105,7 +118,7 @@ export function CategoryPickerSheet({
               type="button"
               className="button button--primary"
               onClick={handleCreate}
-              disabled={!newName.trim()}
+              disabled={!newName.trim() || duplicate}
             >
               Создать
             </button>

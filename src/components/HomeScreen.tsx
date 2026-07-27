@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import { currentPeriod, editablePeriods } from '../lib/period';
 import { matchesQuery } from '../lib/text';
-import type { Category, Period } from '../lib/types';
+import { compareCashbacks } from '../lib/types';
+import type { Cashback, Category, Period } from '../lib/types';
 import { useStore } from '../store/store';
 import { CategoryResultSheet } from './CategoryResultSheet';
 import { CategoryTiles } from './CategoryTiles';
@@ -22,17 +23,21 @@ export function HomeScreen({ onGoToBanks }: { onGoToBanks: () => void }) {
 
   const cashbacks = cashbacksOf(period);
 
-  /** Лучший процент по каждой категории — его показываем прямо на плитке. */
-  const bestPercentById = useMemo(() => {
-    const best = new Map<string, number>();
+  /**
+   * Лучший кешбэк по каждой категории — плитка берёт из него и процент,
+   * и логотип банка. При равных процентах побеждает основной банк:
+   * иначе выбор был бы случайным и менялся бы от месяца к месяцу.
+   */
+  const bestByCategory = useMemo(() => {
+    const best = new Map<string, Cashback>();
     for (const cashback of cashbacks) {
       const current = best.get(cashback.categoryId);
-      if (current === undefined || cashback.percent > current) {
-        best.set(cashback.categoryId, cashback.percent);
+      if (current === undefined || compareCashbacks(cashback, current, data.primaryBankId) < 0) {
+        best.set(cashback.categoryId, cashback);
       }
     }
     return best;
-  }, [cashbacks]);
+  }, [cashbacks, data.primaryBankId]);
 
   const visible = useMemo(
     () => categories.filter((category) => matchesQuery(category.name, query)),
@@ -42,14 +47,14 @@ export function HomeScreen({ onGoToBanks }: { onGoToBanks: () => void }) {
   const withCashback = useMemo(
     () =>
       sortForDisplay(
-        visible.filter((category) => bestPercentById.has(category.id)),
-        bestPercentById,
+        visible.filter((category) => bestByCategory.has(category.id)),
+        bestByCategory,
         data.categoryOrder,
       ),
-    [visible, bestPercentById, data.categoryOrder],
+    [visible, bestByCategory, data.categoryOrder],
   );
 
-  const withoutCashback = visible.filter((category) => !bestPercentById.has(category.id));
+  const withoutCashback = visible.filter((category) => !bestByCategory.has(category.id));
 
   // Самый ранний месяц, за который есть данные — дальше в прошлое листать нечего
   const earliestPeriod = useMemo(() => {
@@ -93,7 +98,7 @@ export function HomeScreen({ onGoToBanks }: { onGoToBanks: () => void }) {
 
         <CategoryTiles
           categories={withCashback}
-          bestPercentById={bestPercentById}
+          bestByCategory={bestByCategory}
           reordering
           onOpen={() => {}}
           onReorder={setCategoryOrder}
@@ -144,26 +149,20 @@ export function HomeScreen({ onGoToBanks }: { onGoToBanks: () => void }) {
 
       {withCashback.length > 0 && (
         <>
-          <div className="section-header">
-            <h3 className="list-heading">
-              {hasCustomOrder ? 'Мой порядок' : 'С кешбэком'}
-            </h3>
-            {/* Переставлять во время поиска нельзя: на экране лишь часть
-                плиток, и сохранился бы порядок этой части. */}
-            {query.trim() === '' && withCashback.length > 1 && (
-              <button
-                type="button"
-                className="link-button"
-                onClick={() => setReordering(true)}
-              >
+          {/* Заголовка у раздела нет: плитки говорят сами за себя.
+              Переставлять во время поиска нельзя — на экране лишь часть
+              плиток, и сохранился бы порядок этой части. */}
+          {query.trim() === '' && withCashback.length > 1 && (
+            <div className="section-header section-header--end">
+              <button type="button" className="link-button" onClick={() => setReordering(true)}>
                 Изменить порядок
               </button>
-            )}
-          </div>
+            </div>
+          )}
 
           <CategoryTiles
             categories={withCashback}
-            bestPercentById={bestPercentById}
+            bestByCategory={bestByCategory}
             reordering={false}
             onOpen={setOpenedCategory}
             onReorder={setCategoryOrder}
@@ -215,11 +214,11 @@ export function HomeScreen({ onGoToBanks }: { onGoToBanks: () => void }) {
  */
 function sortForDisplay(
   categories: Category[],
-  bestPercentById: Map<string, number>,
+  bestByCategory: Map<string, Cashback>,
   order: string[],
 ): Category[] {
   const byPercent = (a: Category, b: Category) =>
-    (bestPercentById.get(b.id) ?? 0) - (bestPercentById.get(a.id) ?? 0);
+    (bestByCategory.get(b.id)?.percent ?? 0) - (bestByCategory.get(a.id)?.percent ?? 0);
 
   if (order.length === 0) return [...categories].sort(byPercent);
 

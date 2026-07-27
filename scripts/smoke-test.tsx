@@ -142,7 +142,8 @@ report(
 // --- Миграция схемы 1 → 2 --------------------------------------------------
 section('Миграция старых данных');
 const migrated = normalizeData(LEGACY_DATA);
-expectEqual('версия схемы поднялась', migrated.schemaVersion, 3);
+expectEqual('версия схемы поднялась', migrated.schemaVersion, 4);
+expectEqual('основной банк по умолчанию не выбран', migrated.primaryBankId, null);
 expectEqual('порядок плиток по умолчанию пуст', migrated.categoryOrder, []);
 expectEqual(
   'myBankIds превратились в myBanks',
@@ -172,15 +173,19 @@ function makeData(options: {
   deleted?: Tombstone[];
   categoryOrder?: string[];
   categoryOrderUpdatedAt?: number;
+  primaryBankId?: string | null;
+  primaryBankUpdatedAt?: number;
 }): AppData {
   return {
-    schemaVersion: 3,
+    schemaVersion: 4,
     myBanks: options.banks ?? [],
     cashbacks: options.cashbacks ?? [],
     customCategories: [],
     deleted: options.deleted ?? [],
     categoryOrder: options.categoryOrder ?? [],
     categoryOrderUpdatedAt: options.categoryOrderUpdatedAt ?? 0,
+    primaryBankId: options.primaryBankId ?? null,
+    primaryBankUpdatedAt: options.primaryBankUpdatedAt ?? 0,
   };
 }
 
@@ -378,8 +383,8 @@ renderAndExpect('экран «Кешбэк»', wrap(<HomeScreen onGoToBanks={() 
   'Строительные', // своя категория попала в список
   '10%', // лучший процент по АЗС — крупным числом на плитке
   '5%', // лучший процент по аптекам
-  'С кешбэком',
   'Без кешбэка в этом месяце',
+  `logos/${TBANK}.png`, // логотип банка прямо на плитке
 ]);
 
 renderAndExpect('экран «Мои банки»', wrap(<BanksScreen />), [
@@ -398,7 +403,8 @@ renderAndExpect(
   ['Оформление', 'Синхронизация', 'Резервная копия', 'Мои категории', 'Строительные', '196', '40'],
 );
 
-renderAndExpect('приложение целиком', wrap(<App />), ['Где кешбэк?', 'Мои банки', 'Ещё']);
+// Заголовков экранов больше нет — остались только названия вкладок
+renderAndExpect('приложение целиком', wrap(<App />), ['Кешбэк', 'Мои банки', 'Ещё']);
 
 // --- Панели ---------------------------------------------------------------
 section('Панели');
@@ -487,8 +493,8 @@ memory.set(
     pharmacyAt !== -1 && fuelAt !== -1 && pharmacyAt < fuelAt,
     'ручной порядок перекрывает сортировку по проценту (Аптеки 5% встали выше АЗС 10%)',
   );
-  report(html.includes('Мой порядок'), 'заголовок раздела меняется на «Мой порядок»');
   report(html.includes('Изменить порядок'), 'есть кнопка входа в режим перестановки');
+  report(!html.includes('Мой порядок'), 'заголовка раздела больше нет');
 }
 
 // Без ручного порядка — снова по убыванию процента
@@ -496,8 +502,64 @@ memory.set('cashback-app', JSON.stringify(LEGACY_DATA));
 {
   const html = renderToString(wrap(<HomeScreen onGoToBanks={() => {}} />)).replace(/<!-- -->/g, '');
   report(html.indexOf('АЗС') < html.indexOf('Аптеки'), 'по умолчанию выше идёт больший процент');
-  report(html.includes('С кешбэком'), 'и заголовок раздела обычный');
 }
+
+// --- Основной банк ---------------------------------------------------------
+section('Основной банк');
+
+// Аптеки: Т-Банк даёт 5%, Альфа — 3%. А супермаркеты у Сбера — 5%,
+// столько же даёт Т-Банк по аптекам. Проверяем поведение при равенстве.
+memory.set(
+  'cashback-app',
+  JSON.stringify({
+    ...LEGACY_DATA,
+    cashbacks: [
+      { id: '1', period: CURRENT_PERIOD, bankId: TBANK, categoryId: 'pharmacy', percent: 5 },
+      { id: '2', period: CURRENT_PERIOD, bankId: ALFA, categoryId: 'pharmacy', percent: 5 },
+    ],
+    primaryBankId: ALFA,
+    primaryBankUpdatedAt: Date.now(),
+  }),
+);
+
+{
+  const html = renderToString(wrap(<HomeScreen onGoToBanks={() => {}} />)).replace(/<!-- -->/g, '');
+  report(
+    html.includes(`logos/${ALFA}.png`),
+    'при равных процентах на плитке логотип основного банка',
+  );
+  report(
+    !html.includes(`logos/${TBANK}.png`),
+    'а не какого-то другого из тех, что дают столько же',
+  );
+}
+
+memory.set('cashback-app', JSON.stringify(LEGACY_DATA));
+
+// Слияние: основной банк — настройка целиком, побеждает заданная позже
+const primaryNewer = mergeAppData(
+  makeData({
+    banks: [{ id: TBANK, addedAt: EARLIER }, { id: ALFA, addedAt: EARLIER }],
+    primaryBankId: TBANK,
+    primaryBankUpdatedAt: EARLIER,
+  }),
+  makeData({
+    banks: [{ id: TBANK, addedAt: EARLIER }, { id: ALFA, addedAt: EARLIER }],
+    primaryBankId: ALFA,
+    primaryBankUpdatedAt: LATER,
+  }),
+  NOW,
+);
+expectEqual('берётся основной банк, заданный позже', primaryNewer.primaryBankId, ALFA);
+
+// Если основной банк успели удалить из своих, настройка сбрасывается —
+// иначе указывала бы на банк, которого нет
+const primaryGone = mergeAppData(
+  makeData({ deleted: [{ key: `bank:${ALFA}`, at: LATER }], primaryBankId: ALFA, primaryBankUpdatedAt: LATER }),
+  makeData({ banks: [{ id: ALFA, addedAt: EARLIER }] }),
+  NOW,
+);
+expectEqual('удалённый банк перестаёт быть основным', primaryGone.primaryBankId, null);
 
 // --- Пустые состояния -----------------------------------------------------
 section('Пустые состояния');

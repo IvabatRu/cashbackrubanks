@@ -214,20 +214,23 @@ h3 {
 .app-header-inner {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: var(--sp-3);
   max-width: var(--content-width);
   margin: 0 auto;
 }
 
-.app-title {
-  font-size: var(--fs-heading);
-  font-weight: 700;
-}
-
 .app-main {
   flex: 1;
+  /* Отступ сверху нужен, только когда шапки нет: без него содержимое
+     прилипало бы к краю экрана. Шапка появляется редко и ненадолго. */
+  padding-top: calc(env(safe-area-inset-top) + var(--sp-2));
   padding-bottom: calc(var(--tabbar-height) + env(safe-area-inset-bottom) + var(--sp-5));
+}
+
+/* Когда шапка показана, свой отступ она уже даёт */
+.app-header + .app-main {
+  padding-top: 0;
 }
 
 .screen {
@@ -756,6 +759,11 @@ a.icon-button {
   margin-top: 0;
 }
 
+/* Когда в строке только кнопка — прижимаем её вправо */
+.section-header--end {
+  justify-content: flex-end;
+}
+
 .category-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(106px, 1fr));
@@ -810,11 +818,22 @@ a.icon-button {
   transform: scale(0.98);
 }
 
+/* Верхняя строка плитки: слева значок категории, справа логотип банка.
+   Правый угол раньше пустовал — теперь по нему видно, куда платить,
+   не открывая подробности. */
+.category-tile-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+}
+
 .category-emoji {
   display: grid;
   place-items: center;
   width: 26px;
   height: 26px;
+  flex: 0 0 auto;
   border-radius: var(--r-xs);
   background: var(--surface-2);
   font-size: 14px;

@@ -5,9 +5,9 @@ const STORAGE_KEY = 'cashback-app';
 /**
  * Версия формата данных.
  * 1 — без отметок времени, 2 — с ними и с надгробиями,
- * 3 — со своим порядком плиток.
+ * 3 — со своим порядком плиток, 4 — с основным банком.
  */
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 /** Надгробия старше этого срока удаляем — иначе список растёт бесконечно. */
 const TOMBSTONE_LIFETIME_MS = 180 * 24 * 60 * 60 * 1000;
@@ -20,6 +20,8 @@ export const EMPTY_DATA: AppData = {
   deleted: [],
   categoryOrder: [],
   categoryOrderUpdatedAt: 0,
+  primaryBankId: null,
+  primaryBankUpdatedAt: 0,
 };
 
 /**
@@ -94,11 +96,15 @@ export function normalizeData(input: unknown): AppData {
     customCategories,
     deleted: pruneTombstones(deleted),
     categoryOrder,
-    categoryOrderUpdatedAt:
-      typeof raw.categoryOrderUpdatedAt === 'number' && Number.isFinite(raw.categoryOrderUpdatedAt)
-        ? raw.categoryOrderUpdatedAt
-        : 0,
+    categoryOrderUpdatedAt: readTimestamp(raw.categoryOrderUpdatedAt),
+    primaryBankId: typeof raw.primaryBankId === 'string' ? raw.primaryBankId : null,
+    primaryBankUpdatedAt: readTimestamp(raw.primaryBankUpdatedAt),
   };
+}
+
+/** Отметка времени из недоверенных данных: всё непохожее считаем нулём. */
+function readTimestamp(value: unknown): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
 }
 
 /**

@@ -30,6 +30,9 @@ interface StoreValue {
   addCustomCategory: (name: string, emoji: string) => Category;
   removeCustomCategory: (id: string) => void;
 
+  /** Основной банк: при равных процентах идёт первым. null — снять выбор */
+  setPrimaryBank: (bankId: string | null) => void;
+
   /** Запоминает порядок плиток, заданный вручную */
   setCategoryOrder: (categoryIds: string[]) => void;
   /** Возвращает автоматический порядок — по убыванию процента */
@@ -117,8 +120,20 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         myBanks: previous.myBanks.filter((bank) => bank.id !== bankId),
         cashbacks: previous.cashbacks.filter((cashback) => cashback.bankId !== bankId),
         deleted: pruneTombstones(deleted, now),
+        // Основной банк не может быть удалённым — сбрасываем настройку
+        primaryBankId: previous.primaryBankId === bankId ? null : previous.primaryBankId,
+        primaryBankUpdatedAt:
+          previous.primaryBankId === bankId ? now : previous.primaryBankUpdatedAt,
       };
     });
+  }, []);
+
+  const setPrimaryBank = useCallback((bankId: string | null) => {
+    setData((previous) => ({
+      ...previous,
+      primaryBankId: bankId,
+      primaryBankUpdatedAt: Date.now(),
+    }));
   }, []);
 
   const moveBank = useCallback((bankId: string, direction: -1 | 1) => {
@@ -303,6 +318,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       removeCashback,
       addCustomCategory,
       removeCustomCategory,
+      setPrimaryBank,
       setCategoryOrder,
       resetCategoryOrder,
       copyPeriod,
@@ -322,6 +338,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       removeCashback,
       addCustomCategory,
       removeCustomCategory,
+      setPrimaryBank,
       setCategoryOrder,
       resetCategoryOrder,
       copyPeriod,

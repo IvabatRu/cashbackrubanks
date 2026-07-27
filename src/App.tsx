@@ -14,24 +14,36 @@ const TABS: { id: Tab; label: string; icon: typeof TagIcon }[] = [
   { id: 'settings', label: 'Ещё', icon: DotsIcon },
 ];
 
-const TAB_TITLES: Record<Tab, string> = {
-  home: 'Где кешбэк?',
-  banks: 'Мои банки',
-  settings: 'Настройки',
-};
-
 export function App() {
   const [tab, setTab] = useState<Tab>('home');
   const { mode, setMode } = useTheme();
+  const sync = useSync();
+
+  // Заголовков экранов больше нет: название раздела и так подсвечено
+  // в панели вкладок, а содержимое говорит само за себя. Шапка остаётся
+  // только ради состояния синхронизации — и появляется, лишь когда есть
+  // что сказать, иначе занимала бы полсотни пикселей впустую.
+  const syncStatus = sync.status === 'syncing' || sync.status === 'error' ? sync.status : null;
 
   return (
     <div className="app">
-      <header className="app-header">
-        <div className="app-header-inner">
-          <h1 className="app-title">{TAB_TITLES[tab]}</h1>
-          <SyncIndicator />
-        </div>
-      </header>
+      {syncStatus && (
+        <header className="app-header">
+          <div className="app-header-inner">
+            {syncStatus === 'syncing' ? (
+              <span className="sync-status sync-status--syncing">
+                <span className="sync-dot" />
+                синхронизирую
+              </span>
+            ) : (
+              <span className="sync-status sync-status--error" title={sync.message}>
+                <span className="sync-dot" />
+                не синхронизировано
+              </span>
+            )}
+          </div>
+        </header>
+      )}
 
       <main className="app-main">
         {tab === 'home' && <HomeScreen onGoToBanks={() => setTab('banks')} />}
@@ -55,33 +67,4 @@ export function App() {
       </nav>
     </div>
   );
-}
-
-/**
- * Небольшой значок в шапке: видно, что синхронизация идёт или что она сломалась.
- * Когда всё в порядке и синхронизировать нечего — ничего не показываем,
- * чтобы не засорять шапку.
- */
-function SyncIndicator() {
-  const sync = useSync();
-
-  if (sync.status === 'syncing') {
-    return (
-      <span className="sync-status sync-status--syncing">
-        <span className="sync-dot" />
-        синхронизирую
-      </span>
-    );
-  }
-
-  if (sync.status === 'error') {
-    return (
-      <span className="sync-status sync-status--error" title={sync.message}>
-        <span className="sync-dot" />
-        не синхронизировано
-      </span>
-    );
-  }
-
-  return null;
 }

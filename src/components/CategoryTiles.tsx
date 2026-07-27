@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react';
 import type { PointerEvent as ReactPointerEvent } from 'react';
+import { getBankOrPlaceholder } from '../data/banks';
 import { formatPercent } from '../lib/text';
-import type { Category } from '../lib/types';
+import type { Cashback, Category } from '../lib/types';
+import { BankLogo } from './BankLogo';
 
 interface CategoryTilesProps {
   /** Категории в том порядке, в котором их надо показать */
   categories: Category[];
-  /** Лучший процент по каждой категории */
-  bestPercentById: Map<string, number>;
+  /** Лучший кешбэк по каждой категории — из него берём и процент, и банк */
+  bestByCategory: Map<string, Cashback>;
   /** Включён ли режим перестановки */
   reordering: boolean;
   onOpen: (category: Category) => void;
@@ -25,7 +27,7 @@ interface CategoryTilesProps {
  */
 export function CategoryTiles({
   categories,
-  bestPercentById,
+  bestByCategory,
   reordering,
   onOpen,
   onReorder,
@@ -71,7 +73,8 @@ export function CategoryTiles({
   return (
     <div className="category-grid">
       {draft.map((category) => {
-        const percent = bestPercentById.get(category.id);
+        const best = bestByCategory.get(category.id);
+        const bank = best ? getBankOrPlaceholder(best.bankId) : null;
         return (
           <button
             key={category.id}
@@ -85,7 +88,7 @@ export function CategoryTiles({
               .filter(Boolean)
               .join(' ')}
             // Полное название — в подсказке: на плитке оно обрезается двумя строками
-            title={category.name}
+            title={bank ? `${category.name} — ${bank.name}` : category.name}
             onClick={() => {
               if (!reordering) onOpen(category);
             }}
@@ -94,9 +97,14 @@ export function CategoryTiles({
             onPointerUp={handlePointerUp}
             onPointerCancel={handlePointerUp}
           >
-            <span className="category-emoji">{category.emoji}</span>
+            <span className="category-tile-top">
+              <span className="category-emoji">{category.emoji}</span>
+              {/* Логотип банка занимает пустовавший правый верхний угол:
+                  так видно, куда платить, ещё до открытия подробностей */}
+              {bank && <BankLogo bank={bank} size={22} />}
+            </span>
             <span className="category-percent">
-              {percent === undefined ? '—' : `${formatPercent(percent)}%`}
+              {best === undefined ? '—' : `${formatPercent(best.percent)}%`}
             </span>
             <span className="category-name">{category.name}</span>
           </button>

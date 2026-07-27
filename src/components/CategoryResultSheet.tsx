@@ -4,7 +4,9 @@ import type { Bank } from '../data/banks';
 import { canLaunchApps, canOpenBankApp, openBankApp, openMirPay } from '../lib/deepLink';
 import { formatPeriod } from '../lib/period';
 import { formatPercent } from '../lib/text';
+import { compareCashbacks } from '../lib/types';
 import type { Cashback, Category, Period } from '../lib/types';
+import { useStore } from '../store/store';
 import { BankLogo } from './BankLogo';
 import { Sheet } from './Sheet';
 import { ContactlessIcon, ExternalIcon } from './icons';
@@ -32,7 +34,10 @@ export function CategoryResultSheet({
   cashbacks,
   period,
 }: CategoryResultSheetProps) {
-  const sorted = [...cashbacks].sort((a, b) => b.percent - a.percent);
+  const { data } = useStore();
+  // Порядок тот же, что на плитках: больший процент выше, при равенстве
+  // впереди основной банк
+  const sorted = [...cashbacks].sort((a, b) => compareCashbacks(a, b, data.primaryBankId));
   const distinctPercents = new Set(sorted.map((cashback) => cashback.percent));
   const allEqual = distinctPercents.size <= 1;
 

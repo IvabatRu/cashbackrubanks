@@ -59,7 +59,7 @@ export interface Tombstone {
 export interface AppData {
   /**
    * Версия схемы. 1 — без отметок времени, 2 — с ними и с надгробиями,
-   * 3 — со своим порядком плиток.
+   * 3 — со своим порядком плиток, 4 — с основным банком.
    */
   schemaVersion: number;
   myBanks: MyBank[];
@@ -77,6 +77,30 @@ export interface AppData {
    * поэтому побеждает тот, что задан позже.
    */
   categoryOrderUpdatedAt: number;
+  /**
+   * Основной банк. Когда проценты равны, он идёт первым, и именно его
+   * логотип показывается на плитке. null — основной банк не выбран.
+   */
+  primaryBankId: string | null;
+  /** Когда основной банк меняли последний раз — нужно при синхронизации */
+  primaryBankUpdatedAt: number;
+}
+
+/**
+ * Сравнение кешбэков для показа: сначала больший процент, при равенстве —
+ * основной банк. Используется и на плитках, и в панели результата,
+ * чтобы порядок нигде не расходился.
+ */
+export function compareCashbacks(
+  a: Cashback,
+  b: Cashback,
+  primaryBankId: string | null,
+): number {
+  if (b.percent !== a.percent) return b.percent - a.percent;
+  if (primaryBankId === null) return 0;
+  if (a.bankId === primaryBankId) return -1;
+  if (b.bankId === primaryBankId) return 1;
+  return 0;
 }
 
 /** Ключ, по которому кешбэк узнаётся при слиянии двух устройств. */

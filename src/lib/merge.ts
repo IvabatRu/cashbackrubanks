@@ -44,10 +44,12 @@ export function mergeAppData(local: AppData, remote: AppData, now: number = Date
     (cashback) => bankIds.has(cashback.bankId),
   );
 
-  // Порядок плиток — единое целое: сливать его поэлементно бессмысленно,
-  // получилась бы каша из двух расстановок. Берём заданный позже.
-  const orderFromLocal = local.categoryOrderUpdatedAt >= remote.categoryOrderUpdatedAt;
-  const orderSource = orderFromLocal ? local : remote;
+  // Настройки — единое целое: сливать их поэлементно бессмысленно,
+  // получилась бы каша из двух расстановок. Берём заданные позже.
+  const orderSource =
+    local.categoryOrderUpdatedAt >= remote.categoryOrderUpdatedAt ? local : remote;
+  const primarySource =
+    local.primaryBankUpdatedAt >= remote.primaryBankUpdatedAt ? local : remote;
 
   return {
     schemaVersion: SCHEMA_VERSION,
@@ -57,6 +59,12 @@ export function mergeAppData(local: AppData, remote: AppData, now: number = Date
     deleted: [...tombstones].map(([key, at]) => ({ key, at })),
     categoryOrder: orderSource.categoryOrder,
     categoryOrderUpdatedAt: orderSource.categoryOrderUpdatedAt,
+    // Если основной банк успели удалить из своих, настройку сбрасываем
+    primaryBankId:
+      primarySource.primaryBankId !== null && bankIds.has(primarySource.primaryBankId)
+        ? primarySource.primaryBankId
+        : null,
+    primaryBankUpdatedAt: primarySource.primaryBankUpdatedAt,
   };
 }
 

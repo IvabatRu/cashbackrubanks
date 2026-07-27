@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { ALL_BANKS } from '../data/banks';
+import { ALL_BANKS, getBankOrPlaceholder } from '../data/banks';
 import { BUILT_IN_CATEGORIES } from '../data/categories';
 import { useInstallPrompt } from '../lib/install';
 import { describeData } from '../lib/merge';
@@ -7,8 +7,18 @@ import { currentPeriod, formatPeriod } from '../lib/period';
 import { downloadBackup, normalizeData } from '../lib/storage';
 import type { ThemeMode } from '../lib/theme';
 import { useStore } from '../store/store';
+import { BankLogo } from './BankLogo';
+import { BankPickerSheet } from './BankPickerSheet';
 import { SyncSection } from './SyncSection';
-import { CheckIcon, DownloadIcon, MoonIcon, SunIcon, TrashIcon, UploadIcon } from './icons';
+import {
+  CheckIcon,
+  CloseIcon,
+  DownloadIcon,
+  MoonIcon,
+  SunIcon,
+  TrashIcon,
+  UploadIcon,
+} from './icons';
 
 const THEME_OPTIONS: { value: ThemeMode; label: string }[] = [
   { value: 'auto', label: 'Как в системе' },
@@ -22,12 +32,15 @@ interface SettingsScreenProps {
 }
 
 export function SettingsScreen({ themeMode, onThemeChange }: SettingsScreenProps) {
-  const { data, replaceAll, removeCustomCategory, clearPeriod } = useStore();
+  const { data, myBankIds, replaceAll, removeCustomCategory, clearPeriod, setPrimaryBank } =
+    useStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importMessage, setImportMessage] = useState('');
+  const [bankPickerOpen, setBankPickerOpen] = useState(false);
   const { canInstall, installed, install } = useInstallPrompt();
 
   const thisPeriod = currentPeriod();
+  const primaryBank = data.primaryBankId ? getBankOrPlaceholder(data.primaryBankId) : null;
 
   async function handleImportFile(file: File) {
     try {
@@ -90,6 +103,57 @@ export function SettingsScreen({ themeMode, onThemeChange }: SettingsScreenProps
           ))}
         </div>
       </section>
+
+      <section className="card">
+        <h2 className="card-title card-title--alone">Основной банк</h2>
+        <p className="card-note">
+          Когда несколько банков дают одинаковый процент, первым показывается основной — и именно
+          его логотип виден на плитке. Основной банк может быть только один.
+        </p>
+
+        {primaryBank ? (
+          <div className="row row--static">
+            <BankLogo bank={primaryBank} size={36} />
+            <span className="row-title">{primaryBank.name}</span>
+            <button
+              type="button"
+              className="icon-button icon-button--danger"
+              aria-label="Убрать основной банк"
+              onClick={() => setPrimaryBank(null)}
+            >
+              <CloseIcon width={18} height={18} />
+            </button>
+          </div>
+        ) : (
+          <p className="card-note">
+            {myBankIds.length === 0
+              ? 'Сначала добавь банки на вкладке «Мои банки».'
+              : 'Не выбран — при равных процентах порядок будет произвольным.'}
+          </p>
+        )}
+
+        {myBankIds.length > 0 && (
+          <button
+            type="button"
+            className="button button--ghost button--full"
+            onClick={() => setBankPickerOpen(true)}
+          >
+            {primaryBank ? 'Выбрать другой' : 'Выбрать банк'}
+          </button>
+        )}
+      </section>
+
+      {/* Выбирать можно только среди своих банков: основным не может быть
+          тот, кешбэков которого у тебя нет */}
+      <BankPickerSheet
+        open={bankPickerOpen}
+        onClose={() => setBankPickerOpen(false)}
+        title="Основной банк"
+        bankIds={myBankIds}
+        selectedIds={data.primaryBankId ? [data.primaryBankId] : []}
+        selectedLabel="основной"
+        onPick={setPrimaryBank}
+      />
 
       <SyncSection />
 
