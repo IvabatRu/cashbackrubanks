@@ -27,9 +27,14 @@ fn launch_app<R: Runtime>(app: AppHandle<R>, package_name: String) -> Result<(),
     #[cfg(target_os = "android")]
     {
         let opener = app.state::<BankOpener<R>>();
+        // Ответ разбираем как произвольное значение и выбрасываем.
+        // Код на Kotlin возвращает пустой объект, и если ожидать здесь
+        // «ничего», разбор падает с «invalid type: map, expected unit» —
+        // уже после того, как приложение успешно открылось.
         opener
             .0
-            .run_mobile_plugin::<()>("launchApp", LaunchArgs { package_name })
+            .run_mobile_plugin::<serde_json::Value>("launchApp", LaunchArgs { package_name })
+            .map(|_| ())
             .map_err(|error| error.to_string())
     }
 
