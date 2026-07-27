@@ -10,6 +10,7 @@ import {
   isCryptoAvailable,
   isValidSyncCode,
   normalizeSyncCode,
+  SYNC_CODE_LENGTH,
 } from '../lib/syncCode';
 import { describeSyncError, getSyncConfig, pullBucket, pushBucket } from '../lib/sync';
 import type { AppData } from '../lib/types';
@@ -23,6 +24,9 @@ const PUSH_DEBOUNCE_MS = 2500;
 
 export type SyncStatus = 'off' | 'idle' | 'syncing' | 'synced' | 'error';
 
+/** Результат попытки подключиться к чужому коду. */
+export type ConnectResult = { ok: true } | { ok: false; message: string };
+
 interface SyncValue {
   /** Заданы ли адрес сервера и ключ в переменных окружения */
   configured: boolean;
@@ -35,8 +39,8 @@ interface SyncValue {
 
   /** Создаёт новый код и включает синхронизацию на этом устройстве */
   createCode: () => string;
-  /** Подключается к чужому коду. false — код неверный */
-  connect: (input: string) => boolean;
+  /** Подключается к чужому коду, предварительно проверив его на сервере */
+  connect: (input: string) => Promise<ConnectResult>;
   /** Отключает синхронизацию. Локальные данные остаются на месте */
   disconnect: () => void;
 
@@ -192,15 +196,62 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     return created;
   }, []);
 
-  const connect = useCallback((input: string): boolean => {
-    const normalized = normalizeSyncCode(input);
-    if (!isValidSyncCode(normalized)) return false;
-    localStorage.setItem(CODE_KEY, normalized);
-    setCode(normalized);
-    setStatus('idle');
-    setMessage('');
-    return true;
-  }, []);
+  /**
+   * Подключение к коду с другого устройства.
+   *
+   * Проверяем на сервере, есть ли по этому коду данные, и только потом
+   * сохраняем его. Причина в том, что своей формы у кода нет: любые 16 знаков
+   * из нашего алфавита выглядят одинаково правильно. Без проверки опечатка
+   * в одном знаке молча создавала бы новый пустой «карман» — человек видел бы
+   * успешное подключение, но данные с первого устройства не приезжали бы
+   * никогда, и причину он бы не понял.
+   *
+   * Заодно это отвечает на попытку придумать код самому: сочинённый код
+   * просто не найдётся.
+   */
+  const connect = useCallback(
+    async (input: string): Promise<ConnectResult> => {
+      const normalized = normalizeSyncCode(input);
+      if (!isValidSyncCode(normalized)) {
+        return {
+          ok: false,
+          message: `Код состоит ровно из ${SYNC_CODE_LENGTH} знаков. Проверь, всё ли скопировалось.`,
+        };
+      }
+      if (!config || !available) {
+        return { ok: false, message: 'Синхронизация сейчас недоступна.' };
+      }
+
+      setStatus('syncing');
+      try {
+        const keys = await deriveSyncKeys(normalized);
+        const remote = await pullBucket(config, keys.bucketId);
+
+        if (!remote) {
+          setStatus('idle');
+          return {
+            ok: false,
+            message:
+              'Такой код не найден. Проверь, верно ли он введён и прошла ли синхронизация на первом устройстве.',
+          };
+        }
+
+        // Данные по коду нашлись — убеждаемся, что они и правда читаются,
+        // прежде чем объявить подключение удачным
+        await decryptJson(keys.key, remote.payload);
+
+        localStorage.setItem(CODE_KEY, normalized);
+        setCode(normalized);
+        setStatus('idle');
+        setMessage('');
+        return { ok: true };
+      } catch (error) {
+        setStatus('idle');
+        return { ok: false, message: describeSyncError(error) };
+      }
+    },
+    [config, available],
+  );
 
   const disconnect = useCallback(() => {
     localStorage.removeItem(CODE_KEY);

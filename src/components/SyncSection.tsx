@@ -17,6 +17,7 @@ export function SyncSection() {
   const [entering, setEntering] = useState(false);
   const [input, setInput] = useState('');
   const [inputError, setInputError] = useState('');
+  const [connecting, setConnecting] = useState(false);
   const [revealed, setRevealed] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -62,13 +63,21 @@ export function SyncSection() {
     }
   }
 
-  function handleConnect() {
-    if (sync.connect(input)) {
+  // Проверка идёт около секунды: вывод ключа из кода намеренно медленный,
+  // плюс запрос к серверу. Без явного ожидания кнопка выглядела бы зависшей.
+  async function handleConnect() {
+    if (connecting) return;
+    setConnecting(true);
+    setInputError('');
+
+    const result = await sync.connect(input);
+
+    setConnecting(false);
+    if (result.ok) {
       setInput('');
-      setInputError('');
       setEntering(false);
     } else {
-      setInputError(`Код должен содержать ровно ${SYNC_CODE_LENGTH} знаков без пробелов.`);
+      setInputError(result.message);
     }
   }
 
@@ -89,16 +98,17 @@ export function SyncSection() {
               <input
                 className="text-input sync-input"
                 value={input}
-                placeholder="16 знаков"
+                placeholder={`${SYNC_CODE_LENGTH} знаков`}
                 autoFocus
                 spellCheck={false}
                 autoCapitalize="none"
+                disabled={connecting}
                 onChange={(event) => {
                   setInput(event.target.value);
                   setInputError('');
                 }}
                 onKeyDown={(event) => {
-                  if (event.key === 'Enter') handleConnect();
+                  if (event.key === 'Enter') void handleConnect();
                 }}
               />
             </label>
@@ -110,6 +120,7 @@ export function SyncSection() {
               <button
                 type="button"
                 className="button button--ghost"
+                disabled={connecting}
                 onClick={() => {
                   setEntering(false);
                   setInputError('');
@@ -117,8 +128,13 @@ export function SyncSection() {
               >
                 Отмена
               </button>
-              <button type="button" className="button button--primary" onClick={handleConnect}>
-                Подключить
+              <button
+                type="button"
+                className="button button--primary"
+                disabled={connecting || !input.trim()}
+                onClick={() => void handleConnect()}
+              >
+                {connecting ? 'Проверяю…' : 'Подключить'}
               </button>
             </div>
           </div>
