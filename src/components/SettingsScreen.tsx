@@ -59,6 +59,9 @@ export function SettingsScreen({ themeMode, onThemeChange }: SettingsScreenProps
 
   return (
     <div className="screen">
+      {/* На ПК эта стопка раскладывается в две колонки — одним столбцом
+          карточки занимали половину экрана, а вторая пустовала */}
+      <div className="card-columns">
       {/* Показываем, только когда браузер действительно готов установить:
           не установлено ещё, движок это умеет и условия соблюдены. */}
       {canInstall && (
@@ -142,18 +145,6 @@ export function SettingsScreen({ themeMode, onThemeChange }: SettingsScreenProps
           </button>
         )}
       </section>
-
-      {/* Выбирать можно только среди своих банков: основным не может быть
-          тот, кешбэков которого у тебя нет */}
-      <BankPickerSheet
-        open={bankPickerOpen}
-        onClose={() => setBankPickerOpen(false)}
-        title="Основной банк"
-        bankIds={myBankIds}
-        selectedIds={data.primaryBankId ? [data.primaryBankId] : []}
-        selectedLabel="основной"
-        onPick={setPrimaryBank}
-      />
 
       <SyncSection />
 
@@ -264,6 +255,21 @@ export function SettingsScreen({ themeMode, onThemeChange }: SettingsScreenProps
           не отдают их автоматически.
         </p>
       </section>
+      </div>
+
+      {/* Вне колонок: всплывающая панель к раскладке отношения не имеет,
+          а внутри многоколоночного блока вела бы себя непредсказуемо.
+          Выбирать можно только среди своих банков — основным не может
+          быть тот, кешбэков которого у тебя нет. */}
+      <BankPickerSheet
+        open={bankPickerOpen}
+        onClose={() => setBankPickerOpen(false)}
+        title="Основной банк"
+        bankIds={myBankIds}
+        selectedIds={data.primaryBankId ? [data.primaryBankId] : []}
+        selectedLabel="основной"
+        onPick={setPrimaryBank}
+      />
     </div>
   );
 }

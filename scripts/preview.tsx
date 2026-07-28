@@ -59,7 +59,7 @@ const DATA = {
     [TBANK, 'supermarkets', 4],
     [OZON, 'marketplaces', 12.5],
     [TBANK, 'fuel', 5],
-    [ALFA, 'cafes', 15],
+    [ALFA, 'restaurants', 15],
     [SBER, 'transport', 3],
     [OZON, 'clothes', 8],
     [ALFA, 'beauty', 20],
@@ -83,6 +83,8 @@ const { StoreProvider } = await import('../src/store/store');
 const { SyncProvider } = await import('../src/store/sync');
 const { App } = await import('../src/App');
 const { CategoryResultSheet } = await import('../src/components/CategoryResultSheet');
+const { BanksScreen } = await import('../src/components/BanksScreen');
+const { SettingsScreen } = await import('../src/components/SettingsScreen');
 const { BUILT_IN_CATEGORIES } = await import('../src/data/categories');
 
 function wrap(children: ReactNode) {
@@ -117,6 +119,25 @@ let body = render(<App />);
  * панели вставляем в конец .app — там же, где её создаёт React.
  * Нужно, чтобы увидеть боковую панель на ПК, не открывая браузер руками.
  */
+/**
+ * Другие вкладки. Какая из них открыта — состояние внутри App, снаружи
+ * не задать, поэтому подменяем содержимое главной области готовой
+ * разметкой нужного экрана. Шапка и панель разделов при этом настоящие.
+ */
+const OTHER_SCREENS: Record<string, ReactNode> = {
+  banks: <BanksScreen />,
+  settings: <SettingsScreen themeMode="dark" onThemeChange={() => {}} />,
+};
+
+const otherScreen = OTHER_SCREENS[process.argv[3] ?? ''];
+if (otherScreen) {
+  const inner = render(otherScreen);
+  body = body.replace(
+    /(<main class="app-main">)[\s\S]*(<\/main>)/,
+    (_full, open: string, close: string) => open + inner + close,
+  );
+}
+
 if (process.argv[3] === 'sheet') {
   const category = BUILT_IN_CATEGORIES.find((item) => item.id === 'pharmacy');
   const sheet = render(

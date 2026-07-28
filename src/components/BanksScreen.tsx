@@ -128,6 +128,8 @@ export function BanksScreen() {
         </div>
       ) : (
         <>
+          {/* На ПК карточки банков раскладываются в две колонки */}
+          <div className="card-columns">
           {myBankIds.map((bankId, index) => {
             const bank = getBankOrPlaceholder(bankId);
             const bankCashbacks = cashbacks
@@ -212,6 +214,7 @@ export function BanksScreen() {
               </section>
             );
           })}
+          </div>
 
           <button
             type="button"

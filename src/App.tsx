@@ -52,20 +52,9 @@ export function App() {
       </main>
 
       {/* Обёртка отвечает только за место на экране: на телефоне держит
-          «облачко» внизу, на ПК — вверху, где рядом помещается знак
-          приложения. Сама панель разделов в обоих случаях одна и та же. */}
+          «облачко» внизу, на ПК — вверху. Сама панель разделов
+          в обоих случаях одна и та же. */}
       <div className="topbar">
-        {/* ?? '/' — приложение собирается ещё и для проверок в Node,
-            где import.meta.env не существует */}
-        <span className="topbar-brand">
-          <img
-            src={`${import.meta.env?.BASE_URL ?? '/'}icons/icon-192.png`}
-            alt=""
-            width={26}
-            height={26}
-          />
-        </span>
-
         <nav className="tabbar" aria-label="Разделы">
           {TABS.map(({ id, label, icon: Icon }) => (
             <button
