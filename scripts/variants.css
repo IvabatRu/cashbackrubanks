@@ -1,0 +1,168 @@
+/* ==========================================================================
+   ВАРИАНТЫ ОФОРМЛЕНИЯ ПК-ВЕРСИИ — ТОЛЬКО ДЛЯ ПРЕДПРОСМОТРА
+
+   Это не часть приложения. Файл подключается генератором снимков
+   (npm run preview:html … <вариант>), чтобы можно было сравнить
+   направления на настоящей разметке, не переписывая её под каждое.
+   Выбранный вариант потом переносится в src/styles.css как следует.
+   ========================================================================== */
+
+@media (min-width: 1000px) {
+  /* ========================================================================
+     ВАРИАНТ «СБЕР»
+
+     Что взято с их сайта: очень крупный заголовок, большие скруглённые
+     плитки с картинкой сверху и подписью снизу, щедрые отступы, радиус
+     заметно больше нашего. Плиток четыре в ряду, а не пять: смысл
+     не в том, чтобы вместить больше, а в том, чтобы каждая читалась
+     с расстояния.
+     ======================================================================== */
+
+  [data-variant='sber'] {
+    --r-card: 22px;
+  }
+
+  [data-variant='sber'] .period-name {
+    font-size: 2.6rem;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+  }
+
+  [data-variant='sber'] .period-hint {
+    font-size: var(--fs-small);
+  }
+
+  [data-variant='sber'] .category-grid {
+    grid-template-columns: repeat(auto-fill, minmax(232px, 1fr));
+    gap: var(--sp-4);
+    padding: var(--sp-6);
+    border-radius: 28px;
+  }
+
+  /* Значок крупно сверху, процент под ним, название последним —
+     тот же порядок чтения, что у их плиток быстрого доступа */
+  [data-variant='sber'] .category-tile {
+    grid-template-rows: auto 1fr auto;
+    gap: var(--sp-3);
+    padding: var(--sp-5);
+    border-radius: 20px;
+  }
+
+  [data-variant='sber'] .category-emoji {
+    width: 76px;
+    height: 76px;
+    border-radius: 20px;
+    font-size: 36px;
+  }
+
+  [data-variant='sber'] .category-tile-top {
+    align-items: flex-start;
+  }
+
+  [data-variant='sber'] .category-tile-top img {
+    width: 30px;
+    height: 30px;
+  }
+
+  [data-variant='sber'] .category-percent {
+    font-size: 2.5rem;
+  }
+
+  [data-variant='sber'] .category-name {
+    font-size: var(--fs-body);
+  }
+
+  [data-variant='sber'] .category-chip {
+    border-radius: var(--r-pill);
+    padding: var(--sp-3) var(--sp-4);
+  }
+
+  /* ========================================================================
+     ВАРИАНТ «АЛЬФА»
+
+     Что взято: бенто — самый выгодный кешбэк занимает большую карточку
+     на четыре клетки, остальные идут обычными. И цвет: у них карточки
+     разноцветные, а не однотонные. Общего белого контейнера нет,
+     карточки лежат прямо на фоне страницы.
+
+     Смысл приёма: на нашем экране все плитки равнозначны, хотя главный
+     вопрос приложения — «где выгоднее всего». Бенто отвечает на него
+     размером, а не порядком.
+     ======================================================================== */
+
+  [data-variant='alfa'] .category-grid {
+    grid-template-columns: repeat(4, 1fr);
+    grid-auto-rows: 168px;
+    gap: var(--sp-3);
+    padding: 0;
+    background: none;
+  }
+
+  /* Первая плитка — она же самый большой процент — на четыре клетки */
+  [data-variant='alfa'] .category-grid > .category-tile:first-child {
+    grid-column: span 2;
+    grid-row: span 2;
+    /* Первая строка у обычной плитки жёстко 26 пикселей — крупный значок
+       из неё вылезал бы наружу */
+    grid-template-rows: auto 1fr auto;
+  }
+
+  [data-variant='alfa'] .category-grid > .category-tile:first-child .category-percent {
+    font-size: 4.5rem;
+  }
+
+  /* У Альфы в большой карточке лежит картинка. Своей у нас нет, поэтому
+     середину занимает крупный значок категории — иначе там дыра. */
+  [data-variant='alfa'] .category-grid > .category-tile:first-child .category-emoji {
+    width: 132px;
+    height: 132px;
+    border-radius: 32px;
+    font-size: 66px;
+  }
+
+  [data-variant='alfa'] .category-grid > .category-tile:first-child .category-name {
+    font-size: var(--fs-title);
+  }
+
+  [data-variant='alfa'] .category-tile {
+    border: 0;
+    border-radius: 20px;
+    padding: var(--sp-4);
+  }
+
+  /* Цвета по кругу. Текст на всех подложках белый, поэтому взяты
+     достаточно тёмные — на светлых процент читался бы плохо. */
+  [data-variant='alfa'] .category-grid > .category-tile:nth-child(5n + 1) {
+    background: #6c2bd9;
+  }
+
+  [data-variant='alfa'] .category-grid > .category-tile:nth-child(5n + 2) {
+    background: #1b54f5;
+  }
+
+  [data-variant='alfa'] .category-grid > .category-tile:nth-child(5n + 3) {
+    background: #c2255c;
+  }
+
+  [data-variant='alfa'] .category-grid > .category-tile:nth-child(5n + 4) {
+    background: #0f7b6c;
+  }
+
+  [data-variant='alfa'] .category-grid > .category-tile:nth-child(5n + 5) {
+    background: #b54708;
+  }
+
+  [data-variant='alfa'] .category-tile .category-percent,
+  [data-variant='alfa'] .category-tile .category-name {
+    color: #fff;
+  }
+
+  [data-variant='alfa'] .category-emoji {
+    background: rgb(255 255 255 / 18%);
+  }
+
+  [data-variant='alfa'] .period-name {
+    font-size: 2.2rem;
+    font-weight: 700;
+  }
+}

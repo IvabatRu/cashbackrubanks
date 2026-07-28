@@ -153,13 +153,19 @@ if (process.argv[3] === 'sheet') {
   body = body.slice(0, lastClose) + sheet + body.slice(lastClose);
 }
 
+// Четвёртым аргументом — вариант оформления. Его стили лежат отдельно
+// и в приложение не входят: они нужны только чтобы сравнить направления.
+const variant = process.argv[4] ?? '';
+const variantCss = variant ? readFileSync(resolve(root, 'scripts/variants.css'), 'utf8') : '';
+
 const html = `<!doctype html>
-<html lang="ru">
+<html lang="ru"${variant ? ` data-variant="${variant}"` : ''}>
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Кешбэк — предпросмотр</title>
     <style>${css}</style>
+    <style>${variantCss}</style>
   </head>
   <body>${body}</body>
 </html>
